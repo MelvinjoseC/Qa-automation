@@ -2,7 +2,9 @@ import os
 import logging
 from datetime import datetime
 from pathlib import Path
-from tkinter import Tk, Label, Button, filedialog, Text, END, Scrollbar, RIGHT, Y, LEFT, BOTH, X, TOP, BOTTOM, Frame
+from tkinter import Tk, Text, END, Scrollbar, RIGHT, Y, LEFT, BOTH, X, TOP, BOTTOM, Frame
+from tkinter import ttk
+import tkinter as tk
 
 from docx import Document
 from reportlab.lib.pagesizes import A4
@@ -360,66 +362,123 @@ class ISOAditorGUI:
     def __init__(self, master):
         self.master = master
         master.title(f"{COMPANY_NAME} - ISO Project Folder Auditor")
+        master.configure(bg="#F4F6F9")
 
         self.mdr_path = None
         self.project_path = None
 
-        # Top branding
-        top_frame = Frame(master)
-        top_frame.pack(side=TOP, fill=X, padx=10, pady=5)
+        # Setup modern styles
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
 
-        self.label_title = Label(
-            top_frame,
+        primary_color = "#003366"  # Deep Navy
+        secondary_color = "#336699" # Medium Blue
+        bg_color = "#F4F6F9"
+        accent_color = "#2E7D32"   # Forest Green
+        text_dark = "#2D3748"
+
+        style.configure(".", background=bg_color, font=("Segoe UI", 10), foreground=text_dark)
+        style.configure("TFrame", background=bg_color)
+        
+        # Labels
+        style.configure("Title.TLabel", font=("Segoe UI", 16, "bold"), foreground=primary_color, background=bg_color)
+        style.configure("Subtitle.TLabel", font=("Segoe UI", 10, "italic"), foreground="#718096", background=bg_color)
+        style.configure("Path.TLabel", font=("Segoe UI", 9), foreground="#4A5568", background=bg_color)
+        style.configure("StatusRed.TLabel", font=("Segoe UI", 9, "bold"), foreground="#E53E3E", background=bg_color)
+        style.configure("StatusGreen.TLabel", font=("Segoe UI", 9, "bold"), foreground="#38A169", background=bg_color)
+
+        # Buttons
+        style.configure("TButton", font=("Segoe UI", 10), padding=6)
+        style.configure("Primary.TButton", font=("Segoe UI", 10, "bold"), foreground="white", background=primary_color)
+        style.map("Primary.TButton", background=[("active", secondary_color)])
+        
+        style.configure("Action.TButton", font=("Segoe UI", 10, "bold"), foreground="white", background=accent_color)
+        style.map("Action.TButton", background=[("active", "#22543D")])
+
+        # Main Outer Container
+        main_container = ttk.Frame(master, padding=15)
+        main_container.pack(fill=BOTH, expand=True)
+
+        # Top branding header
+        header_frame = ttk.Frame(main_container)
+        header_frame.pack(side=TOP, fill=X, pady=(0, 15))
+
+        self.label_title = ttk.Label(
+            header_frame,
             text=f"{COMPANY_NAME} - ISO Folder Audit Tool",
-            font=("Segoe UI", 14, "bold")
+            style="Title.TLabel"
         )
         self.label_title.pack(side=TOP, anchor="w")
 
-        self.label_sub = Label(
-            top_frame,
+        self.label_sub = ttk.Label(
+            header_frame,
             text=COMPANY_TAGLINE,
-            font=("Segoe UI", 9, "italic"),
-            fg="gray"
+            style="Subtitle.TLabel"
         )
         self.label_sub.pack(side=TOP, anchor="w")
 
-        # Middle: buttons
-        mid_frame = Frame(master)
-        mid_frame.pack(side=TOP, fill=X, padx=10, pady=10)
+        # Divider
+        separator = ttk.Separator(main_container, orient="horizontal")
+        separator.pack(side=TOP, fill=X, pady=(0, 15))
 
-        self.btn_mdr = Button(mid_frame, text="Select MDR (.docx)", command=self.select_mdr)
-        self.btn_mdr.pack(side=LEFT, padx=5)
+        # File Selection Area (Card-like layout using LabelFrame)
+        selection_frame = ttk.LabelFrame(main_container, text=" Configuration & Paths ", padding=12)
+        selection_frame.pack(side=TOP, fill=X, pady=(0, 15))
 
-        self.btn_project = Button(mid_frame, text="Select Project Folder", command=self.select_project_folder)
-        self.btn_project.pack(side=LEFT, padx=5)
+        # MDR Document selection row
+        mdr_row = ttk.Frame(selection_frame)
+        mdr_row.pack(fill=X, pady=(0, 8))
+        self.btn_mdr = ttk.Button(mdr_row, text="Browse MDR (.docx)", command=self.select_mdr, style="Primary.TButton")
+        self.btn_mdr.pack(side=LEFT)
+        
+        self.label_mdr_status = ttk.Label(mdr_row, text="No MDR selected", style="StatusRed.TLabel", padding=(10, 0))
+        self.label_mdr_status.pack(side=LEFT, fill=X, expand=True)
 
-        self.btn_run = Button(mid_frame, text="Run Audit & Generate PDF", command=self.run_audit)
-        self.btn_run.pack(side=LEFT, padx=5)
+        # Project Folder selection row
+        project_row = ttk.Frame(selection_frame)
+        project_row.pack(fill=X, pady=(0, 8))
+        self.btn_project = ttk.Button(project_row, text="Browse Project Folder", command=self.select_project_folder, style="Primary.TButton")
+        self.btn_project.pack(side=LEFT)
 
-        # Status labels
-        self.label_mdr_status = Label(master, text="MDR: [Not selected]", fg="red")
-        self.label_mdr_status.pack(side=TOP, anchor="w", padx=10)
+        self.label_project_status = ttk.Label(project_row, text="No Project Folder selected", style="StatusRed.TLabel", padding=(10, 0))
+        self.label_project_status.pack(side=LEFT, fill=X, expand=True)
 
-        self.label_project_status = Label(master, text="Project Folder: [Not selected]", fg="red")
-        self.label_project_status.pack(side=TOP, anchor="w", padx=10)
+        # Action Buttons frame
+        actions_row = ttk.Frame(selection_frame)
+        actions_row.pack(fill=X, pady=(8, 0))
+        self.btn_run = ttk.Button(actions_row, text="Run Folder Audit & Generate PDF Report", command=self.run_audit, style="Action.TButton")
+        self.btn_run.pack(side=LEFT, ipady=2)
 
-        # Log / output console
-        bottom_frame = Frame(master)
-        bottom_frame.pack(side=TOP, fill=BOTH, expand=True, padx=10, pady=10)
+        # Log Console Area
+        console_frame = ttk.LabelFrame(main_container, text=" Audit Execution Console ", padding=10)
+        console_frame.pack(side=TOP, fill=BOTH, expand=True)
 
-        self.text_output = Text(bottom_frame, wrap="word", height=18)
+        self.text_output = Text(
+            console_frame,
+            wrap="word",
+            height=12,
+            font=("Consolas", 9),
+            bg="#1E293B",  # Dark slate background
+            fg="#F8FAFC",  # Near white text
+            insertbackground="white",
+            relief="flat",
+            borderwidth=0
+        )
         self.text_output.pack(side=LEFT, fill=BOTH, expand=True)
 
-        scroll = Scrollbar(bottom_frame, command=self.text_output.yview)
+        scroll = ttk.Scrollbar(console_frame, command=self.text_output.yview)
         scroll.pack(side=RIGHT, fill=Y)
         self.text_output.config(yscrollcommand=scroll.set)
 
-        self.log("Ready. Please select MDR and Project Folder.")
+        self.log("Ready. Please select the MDR document and Project Folder to begin.")
 
     def log(self, message: str):
-        self.text_output.insert(END, message + "\n")
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.text_output.insert(END, f"[{timestamp}] {message}\n")
         self.text_output.see(END)
-        print(message)
         logging.info(message)
 
     def select_mdr(self):
@@ -429,8 +488,8 @@ class ISOAditorGUI:
         )
         if path:
             self.mdr_path = path
-            self.label_mdr_status.config(text=f"MDR: {path}", fg="green")
-            self.log(f"Selected MDR: {path}")
+            self.label_mdr_status.config(text=f"MDR Path: {path}", style="StatusGreen.TLabel")
+            self.log(f"Selected MDR file: {path}")
 
     def select_project_folder(self):
         path = filedialog.askdirectory(
@@ -438,25 +497,25 @@ class ISOAditorGUI:
         )
         if path:
             self.project_path = path
-            self.label_project_status.config(text=f"Project Folder: {path}", fg="green")
+            self.label_project_status.config(text=f"Project Folder Path: {path}", style="StatusGreen.TLabel")
             self.log(f"Selected Project Folder: {path}")
 
     def run_audit(self):
         if not self.mdr_path:
-            self.log("ERROR: MDR file not selected.")
+            self.log("ERROR: Please select a valid MDR Word document first.")
             return
         if not self.project_path:
-            self.log("ERROR: Project Folder not selected.")
+            self.log("ERROR: Please select a valid project directory to audit.")
             return
 
         try:
-            self.log("Parsing MDR...")
+            self.log("Step 1: Parsing Master Document Register (MDR)...")
             required_folders, required_files = parse_mdr_docx(self.mdr_path)
 
-            self.log("Scanning project structure...")
+            self.log("Step 2: Scanning actual project folder structure...")
             actual_folders, actual_files = scan_project_structure(self.project_path)
 
-            self.log("Performing gap analysis...")
+            self.log("Step 3: Performing logical gap analysis...")
             nc_list, obs_list, ofi_list, summary = perform_gap_analysis(
                 required_folders, required_files, actual_folders, actual_files
             )
@@ -468,7 +527,7 @@ class ISOAditorGUI:
             pdf_name = f"ISO_Audit_Report_{timestamp}.pdf"
             pdf_path = os.path.join(report_dir, pdf_name)
 
-            self.log(f"Generating PDF report: {pdf_path}")
+            self.log(f"Step 4: Compiling PDF report and styling tables: {pdf_path}")
             generate_pdf_report(
                 pdf_path,
                 self.project_path,
@@ -483,18 +542,20 @@ class ISOAditorGUI:
                 summary,
             )
 
-            self.log("Audit completed successfully.")
-            self.log(f"Report saved to: {pdf_path}")
-            self.log(f"Logs saved to: {LOG_FILE}")
+            self.log("SUCCESS: Audit run finished successfully.")
+            self.log(f"-> Report saved to: {pdf_path}")
+            self.log(f"-> Session logs appended to: {LOG_FILE}")
 
         except Exception as e:
-            logging.exception("Error during audit run.")
-            self.log(f"ERROR during audit: {e}")
+            logging.exception("Exception occurred during audit execution.")
+            self.log(f"CRITICAL ERROR during audit run: {e}")
 
 
 def main():
     root = Tk()
     root.geometry("900x600")
+    # Apply standard theme colors for Windows title bar if supported,
+    # otherwise fallback to Tkinter default.
     app = ISOAditorGUI(root)
     root.mainloop()
 
