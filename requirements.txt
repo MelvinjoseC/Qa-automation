@@ -1,0 +1,15 @@
+# Core dependencies for STEP BOM App and ISO Auditor
+numpy>=1.22.0
+python-docx>=1.1.0
+reportlab>=4.1.0
+
+# Note on cadquery:
+# cadquery is best installed via conda/mamba:
+#   conda install -c cadquery -c conda-forge cadquery
+# If installing via pip, ensure you have OCP binary wheels:
+#   pip install cadquery
+
+# Development and Testing dependencies
+pytest>=7.4.0
+pytest-cov>=4.1.0
+ruff>=0.2.0
