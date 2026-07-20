@@ -66,6 +66,7 @@ def parse_mdr_docx(mdr_path: str):
     required_folders = set()
     required_files = set()
 
+    # Parse regular paragraphs
     for para in doc.paragraphs:
         text = para.text.strip()
         if not text:
@@ -78,6 +79,20 @@ def parse_mdr_docx(mdr_path: str):
             required_folders.add(norm.rstrip("/"))
         else:
             required_files.add(norm)
+
+    # Parse tables (MDRs are often structured in tables)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for para in cell.paragraphs:
+                    text = para.text.strip()
+                    if not text:
+                        continue
+                    norm = text.replace("\\", "/").lstrip("./")
+                    if norm.endswith("/"):
+                        required_folders.add(norm.rstrip("/"))
+                    else:
+                        required_files.add(norm)
 
     logging.info(f"MDR parse result: {len(required_folders)} folders, {len(required_files)} files.")
     return required_folders, required_files
@@ -107,7 +122,7 @@ def scan_project_structure(project_root: str):
     return actual_folders, actual_files
 
 
-def perform_gap_analysis(required_folders, required_files, actual_folders, actual_files):
+def perform_gap_analysis(required_folders, required_files, actual_folders, actual_files, project_root=None):
     """
     Compare MDR requirements vs actual structure.
 
@@ -167,14 +182,24 @@ def perform_gap_analysis(required_folders, required_files, actual_folders, actua
             "clause": "",
         })
 
-    # OFI examples (simple heuristic):
-    # - Required folder exists but is empty
-    for folder in sorted(required_folders & actual_folders):
-        # Check if folder is empty
-        # NOTE: This is relative path; we can't compute here without root, so this part
-        # is left as a placeholder. In a next version, pass project_root and inspect.
-        # For now, we skip actual emptiness check and just leave OFI empty.
-        pass
+    # OFI check: Required folder exists but is empty
+    if project_root:
+        root_path = Path(project_root).resolve()
+        for folder in sorted(required_folders & actual_folders):
+            folder_path = root_path.joinpath(folder)
+            if folder_path.exists() and folder_path.is_dir():
+                try:
+                    children = [c for c in folder_path.iterdir() if c.name not in (".DS_Store", "Thumbs.db")]
+                    if not children:
+                        ofi_list.append({
+                            "type": "OFI",
+                            "item_type": "Folder",
+                            "path": folder,
+                            "description": f"Required folder '{folder}' exists but is empty.",
+                            "clause": "",
+                        })
+                except Exception as e:
+                    logging.warning(f"Failed to check if folder {folder_path} is empty: {e}")
 
     summary = {
         "missing_folders": len(missing_folders),
@@ -517,7 +542,7 @@ class ISOAditorGUI:
 
             self.log("Step 3: Performing logical gap analysis...")
             nc_list, obs_list, ofi_list, summary = perform_gap_analysis(
-                required_folders, required_files, actual_folders, actual_files
+                required_folders, required_files, actual_folders, actual_files, self.project_path
             )
 
             # Output path
