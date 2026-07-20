@@ -330,50 +330,95 @@ class StepBOMApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("STEP → Geometry BOM (Tk)")
-        self.geometry("1100x700")
+        self.geometry("1100x750")
         self.minsize(960, 600)
+        self.configure(bg="#F4F6F9")
 
         self._step_path = ""
         self._solids: List[SolidRow] = []
         self._bom: List[BomRow] = []
         self._class_frames: List[tk.Frame] = []
 
-        # Controls
-        top = ttk.Frame(self, padding=8)
-        top.pack(side=tk.TOP, fill=tk.X)
+        # Setup custom styles
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
 
-        ttk.Label(top, text="STEP file:").pack(side=tk.LEFT)
+        primary_color = "#003366"  # Deep Navy
+        secondary_color = "#336699" # Medium Blue
+        bg_color = "#F4F6F9"
+        accent_color = "#2E7D32"   # Forest Green
+        text_dark = "#2D3748"
+
+        style.configure(".", background=bg_color, font=("Segoe UI", 10), foreground=text_dark)
+        style.configure("TFrame", background=bg_color)
+        
+        # Notebook styling
+        style.configure("TNotebook", background=bg_color, borderwidth=1)
+        style.configure("TNotebook.Tab", background="#E2E8F0", padding=(12, 4), font=("Segoe UI", 10))
+        style.map("TNotebook.Tab", background=[("selected", bg_color)], font=[("selected", ("Segoe UI", 10, "bold"))])
+
+        # Treeview styling
+        style.configure("Treeview", font=("Segoe UI", 9), rowheight=24, background="white", fieldbackground="white")
+        style.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"), background="#E2E8F0", foreground=text_dark)
+        style.map("Treeview.Heading", background=[("active", "#CBD5E1")])
+
+        # Button styling
+        style.configure("TButton", font=("Segoe UI", 9), padding=5)
+        style.configure("Primary.TButton", font=("Segoe UI", 9, "bold"), foreground="white", background=primary_color)
+        style.map("Primary.TButton", background=[("active", secondary_color)])
+        style.configure("Action.TButton", font=("Segoe UI", 9, "bold"), foreground="white", background=accent_color)
+        style.map("Action.TButton", background=[("active", "#22543D")])
+
+        # Controls Frame (LabelFrame for card layout)
+        settings_frame = ttk.LabelFrame(self, text=" CAD STEP Analysis Settings ", padding=12)
+        settings_frame.pack(side=tk.TOP, fill=tk.X, padx=12, pady=(12, 6))
+
+        # Row 1: File selection
+        row1 = ttk.Frame(settings_frame)
+        row1.pack(fill=tk.X, pady=(0, 8))
+        ttk.Label(row1, text="STEP File:").pack(side=tk.LEFT, padx=(0, 6))
         self.path_var = tk.StringVar()
-        ttk.Entry(top, textvariable=self.path_var, width=60).pack(side=tk.LEFT, padx=6)
-        ttk.Button(top, text="Browse…", command=self.on_browse).pack(side=tk.LEFT)
+        ttk.Entry(row1, textvariable=self.path_var, width=80).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
+        ttk.Button(row1, text="Browse...", command=self.on_browse, style="Primary.TButton").pack(side=tk.LEFT)
 
-        ttk.Label(top, text="Density (kg/m³):").pack(side=tk.LEFT, padx=(12,4))
+        # Row 2: Parameters and action buttons
+        row2 = ttk.Frame(settings_frame)
+        row2.pack(fill=tk.X)
+        
+        ttk.Label(row2, text="Density (kg/m³):").pack(side=tk.LEFT, padx=(0, 4))
         self.density_var = tk.StringVar(value="7850")
-        ttk.Entry(top, textvariable=self.density_var, width=8).pack(side=tk.LEFT)
+        ttk.Entry(row2, textvariable=self.density_var, width=8).pack(side=tk.LEFT, padx=(0, 15))
 
-        ttk.Label(top, text="Dim tol (mm):").pack(side=tk.LEFT, padx=(12,4))
+        ttk.Label(row2, text="Dim Tolerance (mm):").pack(side=tk.LEFT, padx=(0, 4))
         self.tol_var = tk.StringVar(value="0.25")
-        ttk.Entry(top, textvariable=self.tol_var, width=6).pack(side=tk.LEFT)
+        ttk.Entry(row2, textvariable=self.tol_var, width=6).pack(side=tk.LEFT, padx=(0, 20))
 
-        ttk.Button(top, text="Load & Build BOM", command=self.on_load).pack(side=tk.LEFT, padx=(12,4))
-        ttk.Button(top, text="Export Solids CSV", command=self.export_solids).pack(side=tk.LEFT)
-        ttk.Button(top, text="Export BOM CSV", command=self.export_bom).pack(side=tk.LEFT)
+        ttk.Button(row2, text="Load & Build BOM", command=self.on_load, style="Action.TButton").pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(row2, text="Export Solids CSV", command=self.export_solids).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(row2, text="Export BOM CSV", command=self.export_bom).pack(side=tk.LEFT)
 
-        self.status = tk.StringVar(value="Choose a .stp/.step file.")
-        ttk.Label(self, textvariable=self.status, padding=(8,2)).pack(side=tk.TOP, anchor="w")
+        self.status = tk.StringVar(value="Ready. Please select a .stp or .step file to start analysis.")
+        self.status_label = ttk.Label(self, textvariable=self.status, padding=(12, 4))
+        self.status_label.pack(side=tk.TOP, anchor="w")
 
         # Tabs
         nb = ttk.Notebook(self)
-        nb.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+        nb.pack(fill=tk.BOTH, expand=True, padx=12, pady=(4, 12))
+        
         # Solids tab
         self.tab_solids = ttk.Frame(nb)
-        nb.add(self.tab_solids, text="Solids")
+        nb.add(self.tab_solids, text=" Solids List ")
+        
         # BOM tab
         self.tab_bom = ttk.Frame(nb)
-        nb.add(self.tab_bom, text="BOM")
+        nb.add(self.tab_bom, text=" Aggregated BOM ")
+        
         # BOM by class tab
         self.tab_bom_class = ttk.Frame(nb)
-        nb.add(self.tab_bom_class, text="BOM by Class")
+        nb.add(self.tab_bom_class, text=" BOM by Category ")
 
         # Solids table
         self.tree_solids = ttk.Treeview(self.tab_solids, columns=(
@@ -412,13 +457,6 @@ class StepBOMApp(tk.Tk):
         # Container for dynamic per-class tables
         self.bom_class_container = ttk.Frame(self.tab_bom_class, padding=4)
         self.bom_class_container.pack(fill=tk.BOTH, expand=True)
-
-        # Styles
-        style = ttk.Style()
-        try:
-            style.theme_use("clam")
-        except Exception:
-            pass
 
     def _init_tree(self, tree: ttk.Treeview, cols_def: Dict[str, Tuple[str,int,str]]):
         for k,(txt,w,anchor) in cols_def.items():
