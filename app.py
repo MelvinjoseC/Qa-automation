@@ -73,14 +73,21 @@ def bbox_mm(shape) -> Tuple[float, float, float]:
     plen = principal_length_mm(shape)
     if plen and plen < L:
         L = plen
+        # Re-sort to maintain L >= W >= T invariant
+        L, W, T = sorted([L, W, T], reverse=True)
     return L, W, T
 
 def classify(L: float, W: float, T: float) -> str:
+    # Ensure dimensions are strictly positive and non-zero
+    L = max(L, 1e-9)
+    W = max(W, 1e-9)
+    T = max(T, 1e-9)
+
     # plate: clearly thin T compared to W and L
     if T < 0.2 * W and T < 0.1 * L:
         return "plate"
     # pin: W ~ T and long L
-    if abs(W - T) <= 0.15 * max(W, T, 1e-9) and (L / max(T, 1e-9) > 6.0):
+    if abs(W - T) <= 0.15 * max(W, T) and (L / T > 6.0):
         return "pin"
     return "profile"
 
