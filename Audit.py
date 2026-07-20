@@ -9,7 +9,7 @@ import tkinter as tk
 from docx import Document
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib import colors
 
 # =========================
@@ -243,19 +243,35 @@ def generate_pdf_report(
     )
 
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='TitleCenter', alignment=1, fontSize=18, spaceAfter=12))
-    styles.add(ParagraphStyle(name='SectionHeader', fontSize=14, spaceAfter=6, textColor=colors.HexColor("#003366")))
-    styles.add(ParagraphStyle(name='NormalSmall', fontSize=9, spaceAfter=4))
+    
+    # Custom Styles
+    styles.add(ParagraphStyle(name='TitleCenter', alignment=1, fontSize=18, spaceAfter=12, textColor=colors.HexColor("#003366"), fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='SectionHeader', fontSize=12, spaceBefore=12, spaceAfter=6, textColor=colors.HexColor("#003366"), fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='NormalSmall', fontSize=9, spaceAfter=4, leading=12))
+    
+    cell_style = ParagraphStyle(name='TableCell', fontSize=7.5, leading=9.5, textColor=colors.HexColor("#2D3748"))
+    header_style = ParagraphStyle(name='TableHeader', fontSize=8, fontName='Helvetica-Bold', leading=10, textColor=colors.white)
 
     flow = []
 
     # Title / Branding
+    # Try drawing logo if it exists
+    if os.path.exists(COMPANY_LOGO_PATH):
+        try:
+            # Draw logo (width=140, height=45)
+            logo = Image(COMPANY_LOGO_PATH, width=140, height=45)
+            logo.hAlign = 'LEFT'
+            flow.append(logo)
+            flow.append(Spacer(1, 10))
+        except Exception as e:
+            logging.warning(f"Could not load branding logo in PDF: {e}")
+
     title_text = f"{COMPANY_NAME} – ISO Project Folder Audit Report"
     flow.append(Paragraph(title_text, styles['TitleCenter']))
-    flow.append(Paragraph(COMPANY_TAGLINE, styles['Normal']))
-    flow.append(Spacer(1, 12))
+    flow.append(Paragraph(f"<i>{COMPANY_TAGLINE}</i>", styles['NormalSmall']))
+    flow.append(Spacer(1, 10))
 
-    # Meta info
+    # Meta info (Card styling-ish)
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     flow.append(Paragraph(f"<b>Audit Date:</b> {now_str}", styles['Normal']))
     flow.append(Paragraph(f"<b>Project Folder:</b> {project_root}", styles['Normal']))
@@ -265,102 +281,115 @@ def generate_pdf_report(
     # Summary section
     flow.append(Paragraph("A. Summary", styles['SectionHeader']))
     summary_lines = [
-        f"Missing Folders: {summary['missing_folders']}",
-        f"Missing Files: {summary['missing_files']}",
-        f"Extra Folders: {summary['extra_folders']}",
-        f"Extra Files: {summary['extra_files']}",
-        f"Total Non-Conformities (NC): {summary['nc_count']}",
-        f"Total Observations (OBS): {summary['obs_count']}",
-        f"Total Opportunities for Improvement (OFI): {summary['ofi_count']}",
+        f"• Missing Folders: {summary['missing_folders']}",
+        f"• Missing Files: {summary['missing_files']}",
+        f"• Extra Folders: {summary['extra_folders']}",
+        f"• Extra Files: {summary['extra_files']}",
+        f"• Total Non-Conformities (NC): <b>{summary['nc_count']}</b>",
+        f"• Total Observations (OBS): <b>{summary['obs_count']}</b>",
+        f"• Total Opportunities for Improvement (OFI): <b>{summary['ofi_count']}</b>",
     ]
     for line in summary_lines:
         flow.append(Paragraph(line, styles['NormalSmall']))
-    flow.append(Spacer(1, 12))
+    flow.append(Spacer(1, 10))
 
     # MDR Requirements
     flow.append(Paragraph("B. MDR Requirements Overview", styles['SectionHeader']))
-    flow.append(Paragraph(f"Defined Folders: {len(required_folders)}", styles['NormalSmall']))
-    flow.append(Paragraph(f"Defined Documents: {len(required_files)}", styles['NormalSmall']))
+    flow.append(Paragraph(f"Defined Folders: {len(required_folders)} | Defined Documents: {len(required_files)}", styles['NormalSmall']))
     flow.append(Spacer(1, 6))
 
     # Actual Structure
-    flow.append(Paragraph("C. Actual Project Folder Structure (Counts)", styles['SectionHeader']))
-    flow.append(Paragraph(f"Detected Folders: {len(actual_folders)}", styles['NormalSmall']))
-    flow.append(Paragraph(f"Detected Files: {len(actual_files)}", styles['NormalSmall']))
-    flow.append(Spacer(1, 12))
+    flow.append(Paragraph("C. Actual Project Folder Structure", styles['SectionHeader']))
+    flow.append(Paragraph(f"Detected Folders: {len(actual_folders)} | Detected Files: {len(actual_files)}", styles['NormalSmall']))
+    flow.append(Spacer(1, 10))
 
-    # Detailed NC Table
+    # Detailed NC Table (Total width = 535)
     flow.append(Paragraph("D. Non-Conformities (NC)", styles['SectionHeader']))
     if nc_list:
-        nc_data = [["#", "Type", "Item Type", "Path", "Description"]]
+        nc_data = [[
+            Paragraph("<b>#</b>", header_style),
+            Paragraph("<b>Type</b>", header_style),
+            Paragraph("<b>Item Type</b>", header_style),
+            Paragraph("<b>Path</b>", header_style),
+            Paragraph("<b>Description</b>", header_style)
+        ]]
         for i, nc in enumerate(nc_list, start=1):
             nc_data.append([
-                str(i),
-                nc["type"],
-                nc["item_type"],
-                nc["path"],
-                nc["description"],
+                Paragraph(str(i), cell_style),
+                Paragraph(nc["type"], cell_style),
+                Paragraph(nc["item_type"], cell_style),
+                Paragraph(nc["path"], cell_style),
+                Paragraph(nc["description"], cell_style),
             ])
-        nc_table = Table(nc_data, repeatRows=1, colWidths=[25, 35, 60, 200, 200])
+        nc_table = Table(nc_data, repeatRows=1, colWidths=[20, 30, 60, 210, 215])
         nc_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#003366")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
-            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         flow.append(nc_table)
     else:
         flow.append(Paragraph("No Non-Conformities detected.", styles['NormalSmall']))
-    flow.append(Spacer(1, 12))
+    flow.append(Spacer(1, 10))
 
     # OBS
     flow.append(Paragraph("E. Observations (OBS)", styles['SectionHeader']))
     if obs_list:
-        obs_data = [["#", "Type", "Item Type", "Path", "Description"]]
+        obs_data = [[
+            Paragraph("<b>#</b>", header_style),
+            Paragraph("<b>Type</b>", header_style),
+            Paragraph("<b>Item Type</b>", header_style),
+            Paragraph("<b>Path</b>", header_style),
+            Paragraph("<b>Description</b>", header_style)
+        ]]
         for i, obs in enumerate(obs_list, start=1):
             obs_data.append([
-                str(i),
-                obs["type"],
-                obs["item_type"],
-                obs["path"],
-                obs["description"],
+                Paragraph(str(i), cell_style),
+                Paragraph(obs["type"], cell_style),
+                Paragraph(obs["item_type"], cell_style),
+                Paragraph(obs["path"], cell_style),
+                Paragraph(obs["description"], cell_style),
             ])
-        obs_table = Table(obs_data, repeatRows=1, colWidths=[25, 35, 60, 200, 200])
+        obs_table = Table(obs_data, repeatRows=1, colWidths=[20, 30, 60, 210, 215])
         obs_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#666666")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
-            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#475569")),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         flow.append(obs_table)
     else:
         flow.append(Paragraph("No Observations recorded.", styles['NormalSmall']))
-    flow.append(Spacer(1, 12))
+    flow.append(Spacer(1, 10))
 
     # OFI
     flow.append(Paragraph("F. Opportunities for Improvement (OFI)", styles['SectionHeader']))
     if ofi_list:
-        ofi_data = [["#", "Type", "Item Type", "Path", "Description"]]
+        ofi_data = [[
+            Paragraph("<b>#</b>", header_style),
+            Paragraph("<b>Type</b>", header_style),
+            Paragraph("<b>Item Type</b>", header_style),
+            Paragraph("<b>Path</b>", header_style),
+            Paragraph("<b>Description</b>", header_style)
+        ]]
         for i, ofi in enumerate(ofi_list, start=1):
             ofi_data.append([
-                str(i),
-                ofi["type"],
-                ofi["item_type"],
-                ofi["path"],
-                ofi["description"],
+                Paragraph(str(i), cell_style),
+                Paragraph(ofi["type"], cell_style),
+                Paragraph(ofi["item_type"], cell_style),
+                Paragraph(ofi["path"], cell_style),
+                Paragraph(ofi["description"], cell_style),
             ])
-        ofi_table = Table(ofi_data, repeatRows=1, colWidths=[25, 35, 60, 200, 200])
+        ofi_table = Table(ofi_data, repeatRows=1, colWidths=[20, 30, 60, 210, 215])
         ofi_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#006600")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
-            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#16A34A")),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         flow.append(ofi_table)
     else:
@@ -370,8 +399,8 @@ def generate_pdf_report(
     # Corrective Action section (placeholder)
     flow.append(Paragraph("G. Corrective Action Summary", styles['SectionHeader']))
     flow.append(Paragraph(
-        "For each NC, the responsible process owner shall define and implement corrective actions, "
-        "including root cause analysis, target dates, and verification of effectiveness.",
+        "For each NC (Non-Conformity), the responsible process owner shall define and implement corrective actions, "
+        "including root cause analysis, target dates, and verification of effectiveness to comply with ISO 9001 standards.",
         styles['NormalSmall']
     ))
 
