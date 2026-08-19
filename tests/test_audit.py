@@ -7,6 +7,8 @@ from pathlib import Path
 # Import the modules under test
 import Audit
 import mdr_parser
+import project_scanner
+
 
 class TestAuditCore(unittest.TestCase):
     def test_parse_mdr_docx_paragraphs(self):
@@ -115,7 +117,7 @@ class TestAuditCore(unittest.TestCase):
                 f.write("a")
             with open(os.path.join(sub, "file2.txt"), "w") as f:
                 f.write("b")
-            folders, files = Audit.scan_project_structure(tmpdir)
+            folders, files = project_scanner.scan_project_structure(tmpdir)
             self.assertIn("sub", folders)
             self.assertIn("file1.txt", files)
             self.assertIn("sub/file2.txt", files)
