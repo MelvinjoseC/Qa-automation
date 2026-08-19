@@ -67,10 +67,16 @@ def bbox_mm(shape) -> Tuple[float, float, float]:
     return L, W, T
 
 def classify(L: float, W: float, T: float) -> str:
-    # Ensure dimensions are strictly positive and non-zero
-    L = max(L, 1e-9)
-    W = max(W, 1e-9)
-    T = max(T, 1e-9)
+    # Ensure inputs are valid floats, non-negative, and non-zero
+    try:
+        L = float(L)
+        W = float(W)
+        T = float(T)
+    except (TypeError, ValueError):
+        return "profile"
+
+    if L <= 1e-9 or W <= 1e-9 or T <= 1e-9:
+        return "profile"
 
     # plate: clearly thin T compared to W and L
     if T < 0.2 * W and T < 0.1 * L:
@@ -79,6 +85,7 @@ def classify(L: float, W: float, T: float) -> str:
     if abs(W - T) <= 0.15 * max(W, T) and (L / T > 6.0):
         return "pin"
     return "profile"
+
 
 def round_sig(value: float, tol: float) -> float:
     """Round a float to a grid defined by tolerance, e.g., tol=0.25 mm."""
