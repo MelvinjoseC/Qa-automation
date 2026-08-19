@@ -8,6 +8,8 @@ from pathlib import Path
 import Audit
 import mdr_parser
 import project_scanner
+import pdf_generator
+
 
 
 class TestAuditCore(unittest.TestCase):
@@ -62,7 +64,7 @@ class TestAuditCore(unittest.TestCase):
         actual_folders = {"FolderA", "FolderB"}
         actual_files = {"FolderA/File1.txt", "FolderB/File2.txt"}
         
-        nc, obs, ofi, summary = Audit.perform_gap_analysis(
+        nc, obs, ofi, summary = pdf_generator.perform_gap_analysis(
             required_folders, required_files, actual_folders, actual_files
         )
         self.assertEqual(summary["nc_count"], 0)
@@ -75,7 +77,7 @@ class TestAuditCore(unittest.TestCase):
         actual_folders = {"FolderA", "FolderC"}
         actual_files = {"FolderA/File1.txt", "FolderC/File3.txt"}
         
-        nc, obs, ofi, summary = Audit.perform_gap_analysis(
+        nc, obs, ofi, summary = pdf_generator.perform_gap_analysis(
             required_folders, required_files, actual_folders, actual_files
         )
         self.assertEqual(summary["missing_folders"], 1)
@@ -100,13 +102,49 @@ class TestAuditCore(unittest.TestCase):
             with open(os.path.join(tmpdir, "FolderA", "File1.txt"), "w") as f:
                 f.write("hello")
             
-            nc, obs, ofi, summary = Audit.perform_gap_analysis(
+            nc, obs, ofi, summary = pdf_generator.perform_gap_analysis(
                 required_folders, required_files, actual_folders, actual_files, project_root=tmpdir
             )
             # FolderB should be detected as empty and reported as an OFI
             self.assertEqual(summary["ofi_count"], 1)
             self.assertEqual(ofi[0]["path"], "FolderB")
             self.assertIn("exists but is empty", ofi[0]["description"])
+
+    def test_generate_pdf_report(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_path = os.path.join(tmpdir, "report.pdf")
+            required_folders = {"FolderA"}
+            required_files = {"FolderA/File1.txt"}
+            actual_folders = {"FolderA"}
+            actual_files = {"FolderA/File1.txt"}
+            nc_list = []
+            obs_list = []
+            ofi_list = []
+            summary = {
+                "missing_folders": 0,
+                "missing_files": 0,
+                "extra_folders": 0,
+                "extra_files": 0,
+                "nc_count": 0,
+                "obs_count": 0,
+                "ofi_count": 0,
+            }
+            pdf_generator.generate_pdf_report(
+                pdf_path,
+                tmpdir,
+                "dummy_mdr.docx",
+                required_folders,
+                required_files,
+                actual_folders,
+                actual_files,
+                nc_list,
+                obs_list,
+                ofi_list,
+                summary,
+            )
+            self.assertTrue(os.path.exists(pdf_path))
+            self.assertTrue(os.path.getsize(pdf_path) > 0)
+
 
     def test_scan_project_structure(self):
         with tempfile.TemporaryDirectory() as tmpdir:
