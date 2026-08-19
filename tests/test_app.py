@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from app import build_bom, BomRow
+from bom_builder import build_bom, BomRow
 from cad_helpers import round_sig, classify, make_size_key, SolidRow
 
 class TestAppCore(unittest.TestCase):
@@ -62,5 +62,22 @@ class TestAppCore(unittest.TestCase):
         # Verify names are aggregated
         self.assertEqual(bom[1].names, "Plate A, Plate B")
 
+    def test_build_bom_empty(self):
+        bom = build_bom([])
+        self.assertEqual(bom, [])
+
+    def test_build_bom_sorting(self):
+        # profile (rank 0), plate (rank 1), pin (rank 2)
+        s_pin = SolidRow(idx=1, cls="pin", name="Pin A", L_mm=100.0, W_mm=10.0, T_mm=10.0, Vol_cm3=8.0, Area_cm2=30.0, Weight_kg=0.06, sig="sig_pin")
+        s_plate = SolidRow(idx=2, cls="plate", name="Plate A", L_mm=80.0, W_mm=50.0, T_mm=5.0, Vol_cm3=20.0, Area_cm2=80.0, Weight_kg=0.16, sig="sig_plate")
+        s_profile = SolidRow(idx=3, cls="profile", name="Prof A", L_mm=120.0, W_mm=20.0, T_mm=20.0, Vol_cm3=48.0, Area_cm2=100.0, Weight_kg=0.38, sig="sig_prof")
+
+        bom = build_bom([s_pin, s_plate, s_profile])
+        self.assertEqual(len(bom), 3)
+        self.assertEqual(bom[0].class_name, "profile")
+        self.assertEqual(bom[1].class_name, "plate")
+        self.assertEqual(bom[2].class_name, "pin")
+
 if __name__ == "__main__":
     unittest.main()
+
