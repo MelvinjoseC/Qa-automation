@@ -106,6 +106,10 @@ class StepBOMApp(tk.Tk):
         self.status_label = ttk.Label(self, textvariable=self.status, padding=(12, 4))
         self.status_label.pack(side=tk.TOP, anchor="w")
 
+        # Indeterminate progress bar for CAD processing
+        self.progress = ttk.Progressbar(self, orient=tk.HORIZONTAL, mode='indeterminate')
+
+
         # Tabs
         nb = ttk.Notebook(self)
         nb.pack(fill=tk.BOTH, expand=True, padx=12, pady=(4, 12))
@@ -212,14 +216,21 @@ class StepBOMApp(tk.Tk):
             self.tol_var.set("0.25")
 
         self.status.set("Parsing STEP & building BOM…")
+        self.progress.pack(side=tk.TOP, fill=tk.X, padx=12, pady=(0, 6))
+        self.progress.start(10)
         self.update_idletasks()
 
         try:
             solids = load_step_solids(path, density_kg_m3=density, tol_dim=tol)
         except Exception as e:
+            self.progress.stop()
+            self.progress.pack_forget()
             messagebox.showerror("STEP error", str(e))
             self.status.set("Failed.")
             return
+
+        self.progress.stop()
+        self.progress.pack_forget()
 
         self._step_path = path
         self._solids = solids
@@ -232,6 +243,7 @@ class StepBOMApp(tk.Tk):
 
         total_w = sum(b.total_weight_kg for b in bom)
         self.status.set(f"Loaded {len(solids)} solids → {len(bom)} BOM lines | Total weight ≈ {total_w:.3f} kg")
+
 
     def populate_solids(self, rows: List[SolidRow]):
         t = self.tree_solids
