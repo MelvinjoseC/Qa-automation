@@ -16,13 +16,20 @@ class TestAppCore(unittest.TestCase):
         # L=100, W=50, T=4
         self.assertEqual(classify(100.0, 50.0, 4.0), "plate")
         
-        # pin: W ~ T and L / T > 6.0
+        # pin: W ~ T and long L
         # L=100, W=10, T=10
         self.assertEqual(classify(100.0, 10.0, 10.0), "pin")
         
         # profile: otherwise
         # L=100, W=30, T=20
         self.assertEqual(classify(100.0, 30.0, 20.0), "profile")
+
+        # extreme/invalid inputs
+        self.assertEqual(classify(0.0, 10.0, 5.0), "profile")
+        self.assertEqual(classify(-10.0, 5.0, 1.0), "profile")
+        self.assertEqual(classify("invalid", 5.0, 1.0), "profile")
+        self.assertEqual(classify(100.0, None, 1.0), "profile")
+
 
     def test_make_size_key(self):
         # plate
