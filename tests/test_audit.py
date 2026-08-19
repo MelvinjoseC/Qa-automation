@@ -6,6 +6,7 @@ from pathlib import Path
 
 # Import the modules under test
 import Audit
+import mdr_parser
 
 class TestAuditCore(unittest.TestCase):
     def test_parse_mdr_docx_paragraphs(self):
@@ -21,8 +22,8 @@ class TestAuditCore(unittest.TestCase):
         mock_doc.paragraphs = [mock_para1, mock_para2, mock_para3]
         mock_doc.tables = []
 
-        with patch('Audit.Document', return_value=mock_doc):
-            folders, files = Audit.parse_mdr_docx("dummy.docx")
+        with patch('mdr_parser.Document', return_value=mock_doc):
+            folders, files = mdr_parser.parse_mdr_docx("dummy.docx")
             self.assertIn("Project/01_Management", folders)
             self.assertIn("Project/01_Management/QM-001 Quality Plan.docx", files)
             self.assertEqual(len(folders), 1)
@@ -44,11 +45,12 @@ class TestAuditCore(unittest.TestCase):
         mock_table.rows = [mock_row]
         mock_doc.tables = [mock_table]
 
-        with patch('Audit.Document', return_value=mock_doc):
-            folders, files = Audit.parse_mdr_docx("dummy.docx")
+        with patch('mdr_parser.Document', return_value=mock_doc):
+            folders, files = mdr_parser.parse_mdr_docx("dummy.docx")
             self.assertIn("Project/02_Design/Drawing.dwg", files)
             self.assertEqual(len(files), 1)
             self.assertEqual(len(folders), 0)
+
 
     def test_perform_gap_analysis(self):
         required_folders = {"FolderA", "FolderB"}
