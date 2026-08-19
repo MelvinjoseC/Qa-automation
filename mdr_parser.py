@@ -1,5 +1,6 @@
 import logging
 from docx import Document
+from exceptions import MDRParsingError
 
 def parse_mdr_docx(mdr_path: str):
     """
@@ -8,7 +9,11 @@ def parse_mdr_docx(mdr_path: str):
       required_files: set of normalized relative file paths
     """
     logging.info(f"Parsing MDR file: {mdr_path}")
-    doc = Document(mdr_path)
+    try:
+        doc = Document(mdr_path)
+    except Exception as e:
+        raise MDRParsingError(f"Failed to open/parse MDR document: {e}") from e
+
 
     required_folders = set()
     required_files = set()

@@ -6,6 +6,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib import colors
+from exceptions import PDFGenerationError
 
 # Configuration / Branding Defaults (Can be customized)
 COMPANY_NAME = "FUSIE Engineers"
@@ -294,5 +295,8 @@ def generate_pdf_report(
         styles['NormalSmall']
     ))
 
-    doc.build(flow)
+    try:
+        doc.build(flow)
+    except Exception as e:
+        raise PDFGenerationError(f"Failed to compile PDF report: {e}") from e
     logging.info("PDF report generated successfully.")
