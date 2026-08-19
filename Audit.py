@@ -7,7 +7,7 @@ from tkinter import ttk
 import tkinter as tk
 
 
-from docx import Document
+from mdr_parser import parse_mdr_docx
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
@@ -23,6 +23,7 @@ COMPANY_LOGO_PATH = "branding/fusie_logo.png"  # put your logo here (optional)
 
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "iso_audit.log")
 
 logging.basicConfig(
@@ -35,68 +36,9 @@ logging.basicConfig(
 # MDR PARSING ASSUMPTIONS
 # =========================
 """
-MDR FORMAT ASSUMPTION (simple but effective):
-
-We assume the MDR .docx has one required item per line/paragraph, like:
-
-  Project/
-  Project/01_Management/
-  Project/01_Management/QM-001 Quality Manual.docx
-  Project/02_Design/
-  Project/02_Design/DS-010 General Arrangement.dwg
-
-Rules:
-- If line ends with "/" or "\" → treat as REQUIRED FOLDER
-- Else → treat as REQUIRED FILE
-- Paths are treated as relative logical paths. We will normalize them.
-
-You can later customize `parse_mdr_docx()` to match your company’s MDR style
-(e.g. tables, clause columns, etc.).
+MDR FORMAT ASSUMPTION (moved to mdr_parser.py)
 """
 
-
-def parse_mdr_docx(mdr_path: str):
-    """
-    Parse the MDR .docx and return:
-      required_folders: set of normalized relative folder paths
-      required_files: set of normalized relative file paths
-    """
-    logging.info(f"Parsing MDR file: {mdr_path}")
-    doc = Document(mdr_path)
-
-    required_folders = set()
-    required_files = set()
-
-    # Parse regular paragraphs
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if not text:
-            continue
-
-        # Normalize slashes and strip leading "./"
-        norm = text.replace("\\", "/").lstrip("./")
-
-        if norm.endswith("/"):
-            required_folders.add(norm.rstrip("/"))
-        else:
-            required_files.add(norm)
-
-    # Parse tables (MDRs are often structured in tables)
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for para in cell.paragraphs:
-                    text = para.text.strip()
-                    if not text:
-                        continue
-                    norm = text.replace("\\", "/").lstrip("./")
-                    if norm.endswith("/"):
-                        required_folders.add(norm.rstrip("/"))
-                    else:
-                        required_files.add(norm)
-
-    logging.info(f"MDR parse result: {len(required_folders)} folders, {len(required_files)} files.")
-    return required_folders, required_files
 
 
 def scan_project_structure(project_root: str):
