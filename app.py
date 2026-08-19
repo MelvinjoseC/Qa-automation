@@ -1,7 +1,21 @@
-import os, re, csv, math, json, tkinter as tk
+import os, re, csv, math, json, logging, tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Dict
+from logging.handlers import RotatingFileHandler
+
+# Setup rotating log handler (1MB limit, max 3 backup files)
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, "cad_bom.log")
+log_handler = RotatingFileHandler(
+    LOG_FILE, maxBytes=1024 * 1024, backupCount=3, encoding="utf-8"
+)
+logging.basicConfig(
+    handlers=[log_handler],
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
 # Import modular geometry helpers
 from cad_helpers import (
@@ -10,6 +24,7 @@ from cad_helpers import (
     CADQUERY_ERR,
 )
 from bom_builder import BomRow, build_bom
+
 
 
 # ---------------- Tkinter App ----------------
