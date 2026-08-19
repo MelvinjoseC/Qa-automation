@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
 
-# Import modules under test
-from app import round_sig, classify, make_size_key, build_bom, SolidRow, BomRow
+from app import build_bom, BomRow
+from cad_helpers import round_sig, classify, make_size_key, SolidRow
 
 class TestAppCore(unittest.TestCase):
     def test_round_sig(self):
