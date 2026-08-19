@@ -242,6 +242,14 @@ class ISOAditorGUI:
 
 
 def main():
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print(f"{COMPANY_NAME} - ISO Project Folder Auditor")
+        print("Usage:")
+        print("  python Audit.py          Launch the desktop GUI auditor app")
+        print("  python Audit.py --help   Display this help message")
+        sys.exit(0)
+
     root = Tk()
     root.geometry("900x600")
     # Apply standard theme colors for Windows title bar if supported,
@@ -252,3 +260,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

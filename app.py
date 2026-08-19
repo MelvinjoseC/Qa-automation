@@ -359,6 +359,18 @@ class StepBOMApp(tk.Tk):
                             r.qty, f"{r.avg_weight_kg:.6f}", f"{r.total_weight_kg:.0f}"])
         messagebox.showinfo("Export", f"Saved: {path}")
 
-if __name__ == "__main__":
+def main():
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print("STEP → Geometry BOM App")
+        print("Usage:")
+        print("  python app.py          Launch the desktop GUI BOM builder")
+        print("  python app.py --help   Display this help message")
+        sys.exit(0)
+
     app = StepBOMApp()
     app.mainloop()
+
+if __name__ == "__main__":
+    main()
+
