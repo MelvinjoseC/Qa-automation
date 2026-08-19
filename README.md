@@ -34,12 +34,28 @@ The suite comprises two major tools:
 ├── tests/                # Automated Test Suite
 │   ├── test_app.py       # CAD BOM App unit tests
 │   └── test_audit.py     # ISO Auditor unit tests
-├── Audit.py              # ISO Auditor main executable
-├── app.py                # STEP BOM App main executable
+├── Audit.py              # ISO Auditor main Tkinter GUI
+├── app.py                # STEP BOM App main Tkinter GUI
+├── mdr_parser.py         # Word document (.docx) MDR parser
+├── project_scanner.py    # Project folder scanner utility
+├── pdf_generator.py      # ReportLab PDF generator and gap analyser
+├── exceptions.py         # Domain custom exception definitions
+├── cad_helpers.py        # OCP / CadQuery geometry analysis and classify
+├── bom_builder.py        # BOM structuring and formatting service
 ├── requirements.txt      # Python dependencies list
 ├── .gitignore            # Standard git exclusion patterns
 └── README.md             # Project documentation (this file)
 ```
+
+---
+
+## Architectural Design
+
+This project follows a clean separation of concerns (SoC) design:
+- **GUI Layer (`Audit.py`, `app.py`)**: Responsible only for user interactions, input/file browsing events, and updating progress and status indicators.
+- **Service/Logic Layer (`mdr_parser.py`, `project_scanner.py`, `pdf_generator.py`, `cad_helpers.py`, `bom_builder.py`)**: Reusable Python modules containing core business logic. This separation allows full automated testing coverage of critical path calculations without rendering UI windows.
+- **Exception Boundary (`exceptions.py`)**: Custom domain exception definitions to capture error details cleanly during run operations.
+
 
 ---
 
