@@ -113,7 +113,6 @@ class TestAuditCore(unittest.TestCase):
                 f.write("a")
             with open(os.path.join(sub, "file2.txt"), "w") as f:
                 f.write("b")
-            
             folders, files = Audit.scan_project_structure(tmpdir)
             self.assertIn("sub", folders)
             self.assertIn("file1.txt", files)
@@ -121,5 +120,23 @@ class TestAuditCore(unittest.TestCase):
             self.assertEqual(len(folders), 1)
             self.assertEqual(len(files), 2)
 
+
+    @patch('Audit.filedialog.askopenfilename', return_value="mock_mdr.docx")
+    @patch('Audit.Tk')
+    def test_gui_select_mdr(self, mock_tk, mock_ask):
+        root = mock_tk()
+        gui = Audit.ISOAditorGUI(root)
+        gui.select_mdr()
+        self.assertEqual(gui.mdr_path, "mock_mdr.docx")
+
+    @patch('Audit.filedialog.askdirectory', return_value="mock_project_dir")
+    @patch('Audit.Tk')
+    def test_gui_select_project_folder(self, mock_tk, mock_ask):
+        root = mock_tk()
+        gui = Audit.ISOAditorGUI(root)
+        gui.select_project_folder()
+        self.assertEqual(gui.project_path, "mock_project_dir")
+
 if __name__ == "__main__":
     unittest.main()
+
