@@ -6,91 +6,11 @@ from typing import List, Tuple, Dict
 # Import modular geometry helpers
 from cad_helpers import (
     SolidRow,
-    bbox_mm,
-    classify,
-    round_sig,
-    principal_length_mm,
-    geometry_signature,
-    make_size_key,
-    extract_step_names,
-    load_step_solids,
     CADQUERY_OK,
     CADQUERY_ERR,
 )
+from bom_builder import BomRow, build_bom
 
-# ---------------- Data models ----------------
-@dataclass
-class BomRow:
-    pos: int
-    class_name: str
-    key: str           # human-readable size key
-    names: str         # aggregated part names/labels (if available)
-    length_mm: float   # main axis length (or 0 for plates without length)
-    thickness_mm: float
-    qty: int
-    avg_weight_kg: float
-    total_weight_kg: float
-
-
-# ---------------- BOM building ----------------
-def make_size_key(cls: str, L: float, W: float, T: float) -> str:
-    """
-    Human-readable size descriptor per class.
-    """
-    if cls == "plate":
-        # Plate WxL x Thk
-        big1, big2 = sorted([L, W], reverse=True)  # show larger first
-        return f"{big1:.1f}×{big2:.1f}×T{T:.1f} mm"
-    if cls == "pin":
-        # Pin Ø ~ average of W/T, length = L
-        dia = (W + T) / 2.0
-        return f"Ø{dia:.1f}×{L:.1f} mm"
-    # profile: L is primary; show W×T as "minor×thk"-ish
-    return f"L{L:.1f} W{W:.1f} T{T:.1f} mm"
-
-def build_bom(solids: List[SolidRow]) -> List[BomRow]:
-    """
-    Group solids by signature; create BOM rows with qty and weights.
-    POS numbers are assigned sequentially.
-    """
-    groups: Dict[str, List[SolidRow]] = {}
-    for s in solids:
-        groups.setdefault(s.sig, []).append(s)
-
-    bom: List[BomRow] = []
-    pos_counter = 1
-    for sig, items in groups.items():
-        # Take representative
-        rep = items[0]
-        qty = len(items)
-        avg_w = sum(x.Weight_kg for x in items) / qty
-        tot_w = sum(x.Weight_kg for x in items)
-        names = sorted({x.name for x in items if x.name})
-        names_str = ", ".join(names) if names else key  # fallback to size key when no label
-        # Choose length / thickness for display
-        length = rep.L_mm
-        thickness = rep.T_mm if rep.cls != "pin" else (rep.W_mm + rep.T_mm) / 2.0
-        key = make_size_key(rep.cls, rep.L_mm, rep.W_mm, rep.T_mm)
-        bom.append(BomRow(
-            pos=pos_counter,
-            class_name=rep.cls,
-            key=key,
-            names=names_str,
-            length_mm=length,
-            thickness_mm=thickness,
-            qty=qty,
-            avg_weight_kg=avg_w,
-            total_weight_kg=tot_w
-        ))
-        pos_counter += 1
-
-    # Sort by class then by length (desc)
-    cls_rank = {"profile": 0, "plate": 1, "pin": 2}
-    bom.sort(key=lambda r: (cls_rank.get(r.class_name, 9), -r.length_mm))
-    # Reassign POS after sort
-    for i, r in enumerate(bom, start=1):
-        r.pos = i
-    return bom
 
 # ---------------- Tkinter App ----------------
 class StepBOMApp(tk.Tk):
