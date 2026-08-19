@@ -1,5 +1,6 @@
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from pathlib import Path
 from tkinter import Tk, Text, END, Scrollbar, RIGHT, Y, LEFT, BOTH, X, TOP, BOTTOM, Frame, filedialog, messagebox
@@ -21,14 +22,18 @@ COMPANY_LOGO_PATH = "branding/fusie_logo.png"  # put your logo here (optional)
 
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
-os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "iso_audit.log")
 
+# Setup rotating log handler (1MB limit, max 3 backup files)
+log_handler = RotatingFileHandler(
+    LOG_FILE, maxBytes=1024 * 1024, backupCount=3, encoding="utf-8"
+)
 logging.basicConfig(
-    filename=LOG_FILE,
+    handlers=[log_handler],
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
+
 
 # =========================
 # MDR PARSING ASSUMPTIONS
