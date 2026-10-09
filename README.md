@@ -1,88 +1,85 @@
 # Engineering QA Automation & CAD Suite
 
-A professional Python-based desktop application suite designed for engineering QA automation, document control, and CAD file analysis. 
+A professional Python-based desktop application suite designed for engineering QA automation, document control, compliance audits, and CAD file analysis.
 
 The suite comprises two major tools:
-1. **ISO Project Folder Auditor (`Audit.py`)** - Automates compliance audits by cross-referencing actual project workspace folders with a Master Document Register (MDR) `.docx` definition, generating standard compliance PDF audit reports.
-2. **STEP to Geometry BOM App (`app.py`)** - Analyzes 3D CAD STEP file structures using `CadQuery` and OpenCascade (OCP), classifies solid objects into geometric shapes (plates, pins, profiles), groups identical parts, and generates a structured Bill of Materials (BOM).
+1. **ISO Project Folder Auditor (`Audit.py` & `cli.py audit`)** - Automates compliance audits by cross-referencing actual project workspace folders with Master Document Register (MDR) `.docx` or `.csv` registers, calculating ISO compliance health scores and generating professional PDF and JSON audit reports.
+2. **STEP to Geometry BOM App (`app.py` & `cli.py cad`)** - Analyzes 3D CAD STEP file structures using `CadQuery` and OpenCascade (OCP), classifies solid objects into geometric shapes (plates, pins, profiles), groups identical parts, calculates stock and scrap ratios, and generates structured Bills of Materials (BOM).
 
 ---
 
 ## Key Features
 
 ### 📁 ISO Project Folder Auditor
-- **MDR Parsing**: Extracts logical folders and files directly from Master Document Register Word documents (`.docx`), including paragraph listings and embedded tables.
-- **Emptiness Auditing**: Scans the project workspace and marks required folders that exist but are empty as *Opportunities for Improvement (OFI)*.
+- **Multi-Format MDR Parsing**: Extracts logical folders and files directly from Master Document Register Word documents (`.docx`) or CSV/TSV spreadsheets (`.csv`).
+- **ISO Compliance Scoring**: Evaluates compliant vs missing items, providing an overall percentage score (e.g., 95%+ Compliant, Minor Deficiencies, Non-Compliant) and risk penalty index.
+- **Emptiness & Anomaly Detection**: Identifies required folders that exist but are empty as *Opportunities for Improvement (OFI)*.
 - **Gap Analysis**: Identifies missing elements (*Non-Conformities - NC*) and undocumented items (*Observations - OBS*).
-- **Compliance PDF Generation**: Compiles audit summaries, counts, and itemized tabular logs into a professional, auto-wrapped ReportLab PDF with optional corporate branding logo support.
-- **Modern GUI**: Responsive desktop layout featuring asynchronous status logs and card components.
+- **Dual Reporting**: Compiles itemized logs into auto-wrapped ReportLab PDFs and structured machine-readable JSON artifacts.
+- **Responsive GUI**: Multi-threaded Tkinter desktop layout with real-time log outputs.
 
 ### 📐 CAD STEP BOM App
 - **3D Solid Metric Analysis**: Measures volume, surface area, and oriented bounding boxes using OpenCascade boundary evaluation.
-- **Oriented BBox (OBB) & Principal Axis (PCA) Evaluation**: Uses optimal OBB boundaries and PCA vector alignment to estimate exact component lengths independent of orientation.
-- **Geometric Signature Hashing**: Group near-identical components into single BOM entries based on tolerance grid hashing.
-- **BOM Category Tabulation**: Aggregated list and category-specific split views (Plates, Pins, Profiles).
-- **Data Exporting**: Outputs full Solid lists or aggregated BOM rows to standardized CSV files.
+- **Material Density Presets**: Predefined presets for Structural Steel, Stainless Steel, Aluminum 6061/7075, Titanium, Brass, Bronze, Copper, and polymers.
+- **Stock & Scrap Ratio Analysis**: Calculates enclosing bounding box billet weight and estimated machining scrap percentage.
+- **Geometric Signature Hashing**: Groups near-identical components into single BOM entries based on tolerance grid hashing.
+- **BOM Filtering & Summaries**: Filter BOM items by classification, minimum/maximum lengths, and weight thresholds with automated summary statistics.
+- **Data Exporting**: Outputs full Solid lists and BOM rows to standardized CSV and JSON formats.
 
 ---
 
 ## Directory Structure
 
 ```text
-├── .github/workflows/    # CI/CD Workflows
-│   └── test-workflow.yml # Automated linting and tests runner
-├── tests/                # Automated Test Suite
-│   ├── test_app.py       # CAD BOM App unit tests
-│   └── test_audit.py     # ISO Auditor unit tests
-├── Audit.py              # ISO Auditor main Tkinter GUI
-├── app.py                # STEP BOM App main Tkinter GUI
-├── mdr_parser.py         # Word document (.docx) MDR parser
-├── project_scanner.py    # Project folder scanner utility
-├── pdf_generator.py      # ReportLab PDF generator and gap analyser
-├── exceptions.py         # Domain custom exception definitions
-├── cad_helpers.py        # OCP / CadQuery geometry analysis and classify
-├── bom_builder.py        # BOM structuring and formatting service
-├── requirements.txt      # Python dependencies list
-├── .gitignore            # Standard git exclusion patterns
-└── README.md             # Project documentation (this file)
+├── .github/workflows/         # CI/CD Workflows
+│   └── test-workflow.yml      # Multi-version Python test and lint runner
+├── tests/                     # Automated Test Suite
+│   ├── test_app.py            # CAD BOM App unit tests
+│   ├── test_audit.py          # ISO Auditor unit tests
+│   ├── test_bom_features.py   # BOM summary, filtering & JSON tests
+│   ├── test_cli.py            # Headless CLI interface tests
+│   └── test_scanner_features.py # Scanner ignore patterns & metric tests
+├── Audit.py                   # ISO Auditor main Tkinter GUI
+├── app.py                     # STEP BOM App main Tkinter GUI
+├── cli.py                     # Unified Command-Line Interface (Headless)
+├── mdr_parser.py              # DOCX and CSV MDR parser
+├── project_scanner.py         # Project workspace scanner & metadata collector
+├── pdf_generator.py           # ReportLab PDF & JSON compliance report generator
+├── exceptions.py              # Domain custom exception definitions
+├── cad_helpers.py             # OCP / CadQuery geometry analysis & material presets
+├── bom_builder.py             # BOM structuring, filtering & serialization
+├── pyproject.toml             # Pytest, Ruff, and packaging configuration
+├── .editorconfig              # Consistent file formatting rules
+├── .pre-commit-config.yaml    # Git pre-commit lint hooks
+├── requirements.txt           # Python dependencies list
+├── .gitignore                 # Standard git exclusion patterns
+└── README.md                  # Project documentation
 ```
-
----
-
-## Architectural Design
-
-This project follows a clean separation of concerns (SoC) design:
-- **GUI Layer (`Audit.py`, `app.py`)**: Responsible only for user interactions, input/file browsing events, and updating progress and status indicators.
-- **Service/Logic Layer (`mdr_parser.py`, `project_scanner.py`, `pdf_generator.py`, `cad_helpers.py`, `bom_builder.py`)**: Reusable Python modules containing core business logic. This separation allows full automated testing coverage of critical path calculations without rendering UI windows.
-- **Exception Boundary (`exceptions.py`)**: Custom domain exception definitions to capture error details cleanly during run operations.
-
 
 ---
 
 ## Installation & Environment Setup
 
-Because `CadQuery` utilizes the complex `OpenCascade (OCP)` C++ bindings, setup using **Conda/Mamba** is highly recommended.
+Because `CadQuery` utilizes OpenCascade (OCP) C++ bindings, setup using **Conda/Mamba** is recommended.
 
 ### Method 1: Setup via Conda/Mamba (Recommended)
 
-1. **Install Conda or Mamba** (e.g., via [Miniconda](https://docs.conda.io/en/latest/miniconda.html)).
-2. **Create and activate the environment**:
+1. **Create and activate the environment**:
    ```bash
    conda create -n engineering-qa python=3.10 -y
    conda activate engineering-qa
    ```
-3. **Install CadQuery**:
+2. **Install CadQuery**:
    ```bash
    conda install -c cadquery -c conda-forge cadquery -y
    ```
-4. **Install remaining Python dependencies**:
+3. **Install remaining Python dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-### Method 2: Setup via Pip (Alternative)
+### Method 2: Setup via Pip
 
-For standard pip installations, ensure you have wheels pre-compiled for your OS:
 ```bash
 pip install numpy python-docx reportlab pytest pytest-cov ruff
 pip install cadquery
@@ -90,44 +87,67 @@ pip install cadquery
 
 ---
 
-## How to Run the Applications
+## How to Run
 
-### Launch the ISO Project Folder Auditor
+### 1. Unified Command-Line Interface (CLI)
+
+The suite provides a headless CLI (`cli.py`) for automated CI/CD pipelines, nightly builds, and server environments.
+
+#### Run ISO Project Compliance Audit:
+```bash
+python cli.py audit --mdr path/to/MDR.docx --project path/to/workspace --strict
+```
+Options:
+- `--mdr <file>`: Path to MDR register (`.docx` or `.csv`).
+- `--project <dir>`: Path to project directory to audit.
+- `--pdf <path>`: Optional custom destination for the PDF report.
+- `--json <path>`: Optional custom destination for machine-readable JSON report.
+- `--strict`: Returns non-zero exit code if any Non-Conformity (NC) is detected.
+
+#### Run CAD STEP BOM Extraction:
+```bash
+python cli.py cad --step model.stp --material "Aluminum Alloy (6061/7075)" --csv-bom bom.csv --json-bom bom.json
+```
+
+#### List Supported Material Presets:
+```bash
+python cli.py materials
+```
+
+---
+
+### 2. Desktop GUI Applications
+
+#### Launch the ISO Project Folder Auditor
 ```bash
 python Audit.py
 ```
-- Select an MDR Word Document (`.docx`).
+- Select an MDR Word Document (`.docx`) or CSV register (`.csv`).
 - Select the directory of the project to audit.
-- Click **Run Folder Audit & Generate PDF Report**. The generated PDF is saved in `_audit_reports/` inside the selected project directory.
+- Click **Run Folder Audit & Generate PDF Report**. Generated reports are saved to `_audit_reports/`.
 
-### Launch the STEP to Geometry BOM App
+#### Launch the STEP to Geometry BOM App
 ```bash
 python app.py
 ```
-- Choose a `.stp`/`.step` CAD assembly file.
-- Adjust material Density (default: `7850 kg/m³` for Steel) and Dimension Tolerance grid.
-- Click **Load & Build BOM** to view calculations.
-- Export results to CSV as needed.
+- Select a `.stp`/`.step` CAD file.
+- Choose a material preset from the dropdown (or enter a custom density).
+- Click **Load & Build BOM** to view grouped geometries and weights asynchronously.
+- Export results to CSV or JSON.
 
 ---
 
 ## Testing & Quality Assurance
 
-A comprehensive unit test suite is provided to verify core business logic.
+Run the test suite using `pytest`:
 
-Run tests using `pytest` inside your active virtual environment:
-
-### Run all tests
 ```bash
-pytest tests/ -v
-```
+# Run all automated tests
+pytest
 
-### Run tests with code coverage report
-```bash
-pytest --cov=. tests/ --cov-report=term-missing
-```
+# Run tests with code coverage report
+pytest --cov=. --cov-report=term-missing
 
-### Lint code using Ruff
-```bash
+# Lint code using Ruff
 ruff check .
 ```
