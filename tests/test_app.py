@@ -84,6 +84,38 @@ class TestAppCore(unittest.TestCase):
         self.assertEqual(bom[1].class_name, "plate")
         self.assertEqual(bom[2].class_name, "pin")
 
+    def test_materials_and_density(self):
+        from cad_helpers import convert_density, get_material_density, list_supported_materials
+
+        self.assertEqual(get_material_density("Structural Steel (S235/S355)"), 7850.0)
+        self.assertEqual(get_material_density("aluminum"), 2700.0)
+        self.assertEqual(get_material_density("unknown_mat", fallback=5000.0), 5000.0)
+        self.assertIn("Structural Steel (S235/S355)", list_supported_materials())
+
+        # Density conversion: 7850 kg/m3 = 7.85 g/cm3
+        self.assertAlmostEqual(convert_density(7850.0, "kg/m3", "g/cm3"), 7.85, places=2)
+        self.assertAlmostEqual(convert_density(7.85, "g/cm3", "kg/m3"), 7850.0, places=1)
+
+    def test_aspect_ratios_and_slenderness(self):
+        from cad_helpers import aspect_ratios, compute_scrap_percentage, estimate_raw_stock_weight, slenderness_ratio
+
+        lw, wt = aspect_ratios(100.0, 50.0, 10.0)
+        self.assertEqual(lw, 2.0)
+        self.assertEqual(wt, 5.0)
+
+        slenderness = slenderness_ratio(100.0, 10.0, 5.0)
+        self.assertEqual(slenderness, 20.0)
+
+        # 100 x 50 x 10 mm = 50,000 mm3 = 5e-5 m3 * 7850 = 0.3925 kg
+        stock_w = estimate_raw_stock_weight(100.0, 50.0, 10.0, 7850.0)
+        self.assertAlmostEqual(stock_w, 0.3925, places=4)
+
+        scrap = compute_scrap_percentage(0.200, stock_w)
+        self.assertGreater(scrap, 0.0)
+        self.assertLess(scrap, 100.0)
+        self.assertEqual(compute_scrap_percentage(0.5, 0.4), 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
 

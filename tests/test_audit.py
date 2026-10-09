@@ -178,6 +178,59 @@ class TestAuditCore(unittest.TestCase):
         gui.select_project_folder()
         self.assertEqual(gui.project_path, "mock_project_dir")
 
+    def test_parse_mdr_csv(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_path = os.path.join(tmpdir, "mdr.csv")
+            with open(csv_path, "w", encoding="utf-8") as f:
+                f.write("Path\n")
+                f.write("Project/01_Specs/\n")
+                f.write("Project/01_Specs/Doc1.pdf\n")
+            folders, files = mdr_parser.parse_mdr_csv(csv_path)
+            self.assertIn("Project/01_Specs", folders)
+            self.assertIn("Project/01_Specs/Doc1.pdf", files)
+
+            # Test unified dispatcher
+            f2, doc2 = mdr_parser.parse_mdr(csv_path)
+            self.assertEqual(folders, f2)
+            self.assertEqual(files, doc2)
+
+    def test_calculate_compliance_score(self):
+        # 10 items, 0 NC -> 100% COMPLIANT
+        res1 = pdf_generator.calculate_compliance_score(10, 0, 0, 0)
+        self.assertEqual(res1["compliance_score"], 100.0)
+        self.assertEqual(res1["compliance_status"], "COMPLIANT")
+        self.assertEqual(res1["severity_index"], 0)
+
+        # 10 items, 1 NC -> 90% MINOR DEFICIENCIES
+        res2 = pdf_generator.calculate_compliance_score(10, 1, 1, 2)
+        self.assertEqual(res2["compliance_score"], 90.0)
+        self.assertEqual(res2["compliance_status"], "MINOR DEFICIENCIES")
+        self.assertEqual(res2["severity_index"], 15)  # 1*10 + 1*3 + 2*1 = 15
+
+        # 10 items, 3 NC -> 70% NON-COMPLIANT
+        res3 = pdf_generator.calculate_compliance_score(10, 3)
+        self.assertEqual(res3["compliance_score"], 70.0)
+        self.assertEqual(res3["compliance_status"], "NON-COMPLIANT")
+
+    def test_generate_json_audit_report(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_out = os.path.join(tmpdir, "report.json")
+            summary = {"nc_count": 0, "obs_count": 0, "ofi_count": 0, "compliance_score": 100.0}
+            pdf_generator.generate_json_audit_report(
+                json_out, tmpdir, "dummy_mdr.docx",
+                {"folderA"}, {"folderA/file1.txt"},
+                {"folderA"}, {"folderA/file1.txt"},
+                [], [], [], summary
+            )
+            self.assertTrue(os.path.exists(json_out))
+            with open(json_out, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self.assertIn("metadata", data)
+            self.assertIn("summary", data)
+            self.assertEqual(data["summary"]["compliance_score"], 100.0)
+
+
 if __name__ == "__main__":
     unittest.main()
 
