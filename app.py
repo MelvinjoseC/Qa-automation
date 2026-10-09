@@ -1,8 +1,10 @@
-import os, re, csv, math, json, logging, tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from dataclasses import dataclass, asdict
-from typing import List, Tuple, Dict
+import csv
+import logging
 from logging.handlers import RotatingFileHandler
+import os
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+from typing import List
 
 # Setup rotating log handler (1MB limit, max 3 backup files)
 LOG_DIR = "logs"
@@ -18,12 +20,13 @@ logging.basicConfig(
 )
 
 # Import modular geometry helpers
-from cad_helpers import (
-    SolidRow,
-    CADQUERY_OK,
-    CADQUERY_ERR,
-)
 from bom_builder import BomRow, build_bom
+from cad_helpers import (
+    CADQUERY_ERR,
+    CADQUERY_OK,
+    SolidRow,
+    load_step_solids,
+)
 
 
 
