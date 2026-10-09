@@ -106,3 +106,46 @@ def summarize_bom(bom: List[BomRow]) -> BomSummary:
         class_distribution=distribution,
     )
 
+
+def filter_bom(
+    bom: List[BomRow],
+    class_name: str | None = None,
+    min_length: float | None = None,
+    max_length: float | None = None,
+    min_weight: float | None = None,
+    max_weight: float | None = None,
+    min_qty: int | None = None,
+) -> List[BomRow]:
+    """Filter BOM rows based on classification, dimensional bounds, or weight limits."""
+    filtered = []
+    for r in bom:
+        if class_name is not None and r.class_name.lower() != class_name.lower():
+            continue
+        if min_length is not None and r.length_mm < min_length:
+            continue
+        if max_length is not None and r.length_mm > max_length:
+            continue
+        if min_weight is not None and r.total_weight_kg < min_weight:
+            continue
+        if max_weight is not None and r.total_weight_kg > max_weight:
+            continue
+        if min_qty is not None and r.qty < min_qty:
+            continue
+        filtered.append(r)
+
+    result = []
+    for i, r in enumerate(filtered, start=1):
+        result.append(BomRow(
+            pos=i,
+            class_name=r.class_name,
+            key=r.key,
+            names=r.names,
+            length_mm=r.length_mm,
+            thickness_mm=r.thickness_mm,
+            qty=r.qty,
+            avg_weight_kg=r.avg_weight_kg,
+            total_weight_kg=r.total_weight_kg,
+        ))
+    return result
+
+
