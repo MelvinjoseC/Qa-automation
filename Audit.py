@@ -1,11 +1,23 @@
-import os
+from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
-from pathlib import Path
-from tkinter import Tk, Text, END, Scrollbar, RIGHT, Y, LEFT, BOTH, X, TOP, BOTTOM, Frame, filedialog, messagebox
-from tkinter import ttk
-import tkinter as tk
+import os
+from tkinter import (
+    BOTH,
+    BOTTOM,
+    END,
+    LEFT,
+    RIGHT,
+    TOP,
+    Frame,
+    Scrollbar,
+    Text,
+    Tk,
+    X,
+    Y,
+    filedialog,
+    ttk,
+)
 
 
 from mdr_parser import parse_mdr_docx
@@ -254,7 +266,7 @@ def main():
     root.geometry("900x600")
     # Apply standard theme colors for Windows title bar if supported,
     # otherwise fallback to Tkinter default.
-    app = ISOAditorGUI(root)
+    _app = ISOAditorGUI(root)
     root.mainloop()
 
 
