@@ -4,7 +4,15 @@ from logging.handlers import RotatingFileHandler
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from typing import List
+from typing import Dict, List, Tuple
+
+from bom_builder import BomRow, build_bom
+from cad_helpers import (
+    CADQUERY_ERR,
+    CADQUERY_OK,
+    SolidRow,
+    load_step_solids,
+)
 
 # Setup rotating log handler (1MB limit, max 3 backup files)
 LOG_DIR = "logs"
@@ -17,15 +25,6 @@ logging.basicConfig(
     handlers=[log_handler],
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-)
-
-# Import modular geometry helpers
-from bom_builder import BomRow, build_bom
-from cad_helpers import (
-    CADQUERY_ERR,
-    CADQUERY_OK,
-    SolidRow,
-    load_step_solids,
 )
 
 
@@ -250,7 +249,8 @@ class StepBOMApp(tk.Tk):
 
     def populate_solids(self, rows: List[SolidRow]):
         t = self.tree_solids
-        for i in t.get_children(): t.delete(i)
+        for i in t.get_children():
+            t.delete(i)
         for r in rows:
             t.insert("", "end", values=(
                 r.idx, r.cls, r.name,
@@ -260,7 +260,8 @@ class StepBOMApp(tk.Tk):
 
     def populate_bom(self, rows: List[BomRow]):
         t = self.tree_bom
-        for i in t.get_children(): t.delete(i)
+        for i in t.get_children():
+            t.delete(i)
         for r in rows:
             t.insert("", "end", values=(
                 r.pos, r.class_name, r.key, r.names,
@@ -311,14 +312,13 @@ class StepBOMApp(tk.Tk):
             self._class_frames.append(fr)
 
     def sort_tree(self, tree: ttk.Treeview, col_key: str, desc: bool):
-        # fetch column index
-        cols = list(tree["columns"])
-        idx = cols.index(col_key)
         data = [(tree.set(k, col_key), k) for k in tree.get_children("")]
         # numeric?
         def try_num(s):
-            try: return float(s)
-            except: return float("inf")
+            try:
+                return float(s)
+            except (ValueError, TypeError):
+                return float("inf")
         if col_key in ("pos","L","W","T","vol","area","weight","len","thk","qty","avgw","totw","#"):
             data.sort(key=lambda t: try_num(t[0]), reverse=desc)
         else:
@@ -335,7 +335,8 @@ class StepBOMApp(tk.Tk):
             title="Export Solids CSV", defaultextension=".csv",
             filetypes=[("CSV","*.csv")]
         )
-        if not path: return
+        if not path:
+            return
         with open(path, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["#","Class","Name","L_mm","W_mm","T_mm","Vol_cm3","Area_cm2","Weight_kg","Signature"])
@@ -352,7 +353,8 @@ class StepBOMApp(tk.Tk):
             title="Export BOM CSV", defaultextension=".csv",
             filetypes=[("CSV","*.csv")]
         )
-        if not path: return
+        if not path:
+            return
         with open(path, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["POS","Class","SizeKey","Names","Length_mm","Thk_or_Dia_mm","Qty","AvgWeight_kg","TotalWeight_kg"])

@@ -1,9 +1,7 @@
-import os
-import re
-import math
-import hashlib
 from dataclasses import dataclass
-from typing import List, Tuple, Dict
+import hashlib
+import re
+from typing import Dict, List, Tuple
 import numpy as np
 
 # ---- OCC / CadQuery imports ----
