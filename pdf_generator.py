@@ -134,12 +134,12 @@ def generate_pdf_report(
     )
 
     styles = getSampleStyleSheet()
-    
+
     # Custom Styles
     styles.add(ParagraphStyle(name='TitleCenter', alignment=1, fontSize=18, spaceAfter=12, textColor=colors.HexColor("#003366"), fontName='Helvetica-Bold'))
     styles.add(ParagraphStyle(name='SectionHeader', fontSize=12, spaceBefore=12, spaceAfter=6, textColor=colors.HexColor("#003366"), fontName='Helvetica-Bold'))
     styles.add(ParagraphStyle(name='NormalSmall', fontSize=9, spaceAfter=4, leading=12))
-    
+
     cell_style = ParagraphStyle(name='TableCell', fontSize=7.5, leading=9.5, textColor=colors.HexColor("#2D3748"))
     header_style = ParagraphStyle(name='TableHeader', fontSize=8, fontName='Helvetica-Bold', leading=10, textColor=colors.white)
 

@@ -58,7 +58,7 @@ class StepBOMApp(tk.Tk):
 
         style.configure(".", background=bg_color, font=("Segoe UI", 10), foreground=text_dark)
         style.configure("TFrame", background=bg_color)
-        
+
         # Notebook styling
         style.configure("TNotebook", background=bg_color, borderwidth=1)
         style.configure("TNotebook.Tab", background="#E2E8F0", padding=(12, 4), font=("Segoe UI", 10))
@@ -91,7 +91,7 @@ class StepBOMApp(tk.Tk):
         # Row 2: Parameters and action buttons
         row2 = ttk.Frame(settings_frame)
         row2.pack(fill=tk.X)
-        
+
         ttk.Label(row2, text="Density (kg/m³):").pack(side=tk.LEFT, padx=(0, 4))
         self.density_var = tk.StringVar(value="7850")
         ttk.Entry(row2, textvariable=self.density_var, width=8).pack(side=tk.LEFT, padx=(0, 15))
@@ -115,15 +115,15 @@ class StepBOMApp(tk.Tk):
         # Tabs
         nb = ttk.Notebook(self)
         nb.pack(fill=tk.BOTH, expand=True, padx=12, pady=(4, 12))
-        
+
         # Solids tab
         self.tab_solids = ttk.Frame(nb)
         nb.add(self.tab_solids, text=" Solids List ")
-        
+
         # BOM tab
         self.tab_bom = ttk.Frame(nb)
         nb.add(self.tab_bom, text=" Aggregated BOM ")
-        
+
         # BOM by class tab
         self.tab_bom_class = ttk.Frame(nb)
         nb.add(self.tab_bom_class, text=" BOM by Category ")

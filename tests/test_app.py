@@ -14,11 +14,11 @@ class TestAppCore(unittest.TestCase):
         # plate: T < 0.2 * W and T < 0.1 * L
         # L=100, W=50, T=4
         self.assertEqual(classify(100.0, 50.0, 4.0), "plate")
-        
+
         # pin: W ~ T and long L
         # L=100, W=10, T=10
         self.assertEqual(classify(100.0, 10.0, 10.0), "pin")
-        
+
         # profile: otherwise
         # L=100, W=30, T=20
         self.assertEqual(classify(100.0, 30.0, 20.0), "profile")
@@ -51,7 +51,7 @@ class TestAppCore(unittest.TestCase):
         # Output should be sorted by class rank ("profile": 0, "plate": 1, "pin": 2)
         # So profile (POS 1) comes first, then plate (POS 2)
         self.assertEqual(len(bom), 2)
-        
+
         # Profile checks
         self.assertEqual(bom[0].pos, 1)
         self.assertEqual(bom[0].class_name, "profile")

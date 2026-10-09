@@ -4,13 +4,10 @@ from logging.handlers import RotatingFileHandler
 import os
 from tkinter import (
     BOTH,
-    BOTTOM,
     END,
     LEFT,
     RIGHT,
     TOP,
-    Frame,
-    Scrollbar,
     Text,
     Tk,
     X,
@@ -84,7 +81,7 @@ class ISOAditorGUI:
 
         style.configure(".", background=bg_color, font=("Segoe UI", 10), foreground=text_dark)
         style.configure("TFrame", background=bg_color)
-        
+
         # Labels
         style.configure("Title.TLabel", font=("Segoe UI", 16, "bold"), foreground=primary_color, background=bg_color)
         style.configure("Subtitle.TLabel", font=("Segoe UI", 10, "italic"), foreground="#718096", background=bg_color)
@@ -96,7 +93,7 @@ class ISOAditorGUI:
         style.configure("TButton", font=("Segoe UI", 10), padding=6)
         style.configure("Primary.TButton", font=("Segoe UI", 10, "bold"), foreground="white", background=primary_color)
         style.map("Primary.TButton", background=[("active", secondary_color)])
-        
+
         style.configure("Action.TButton", font=("Segoe UI", 10, "bold"), foreground="white", background=accent_color)
         style.map("Action.TButton", background=[("active", "#22543D")])
 
@@ -135,7 +132,7 @@ class ISOAditorGUI:
         mdr_row.pack(fill=X, pady=(0, 8))
         self.btn_mdr = ttk.Button(mdr_row, text="Browse MDR (.docx)", command=self.select_mdr, style="Primary.TButton")
         self.btn_mdr.pack(side=LEFT)
-        
+
         self.label_mdr_status = ttk.Label(mdr_row, text="No MDR selected", style="StatusRed.TLabel", padding=(10, 0))
         self.label_mdr_status.pack(side=LEFT, fill=X, expand=True)
 

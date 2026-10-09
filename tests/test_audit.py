@@ -21,7 +21,7 @@ class TestAuditCore(unittest.TestCase):
         mock_para2.text = "Project/01_Management/QM-001 Quality Plan.docx"
         mock_para3 = MagicMock()
         mock_para3.text = ""  # Empty paragraph should be ignored
-        
+
         mock_doc.paragraphs = [mock_para1, mock_para2, mock_para3]
         mock_doc.tables = []
 
@@ -36,13 +36,13 @@ class TestAuditCore(unittest.TestCase):
         # Mock table structure
         mock_doc = MagicMock()
         mock_doc.paragraphs = []
-        
+
         mock_table = MagicMock()
         mock_row = MagicMock()
         mock_cell = MagicMock()
         mock_para = MagicMock()
         mock_para.text = "Project/02_Design/Drawing.dwg"
-        
+
         mock_cell.paragraphs = [mock_para]
         mock_row.cells = [mock_cell]
         mock_table.rows = [mock_row]
@@ -58,11 +58,11 @@ class TestAuditCore(unittest.TestCase):
     def test_perform_gap_analysis(self):
         required_folders = {"FolderA", "FolderB"}
         required_files = {"FolderA/File1.txt", "FolderB/File2.txt"}
-        
+
         # Test case 1: Exact match
         actual_folders = {"FolderA", "FolderB"}
         actual_files = {"FolderA/File1.txt", "FolderB/File2.txt"}
-        
+
         nc, obs, ofi, summary = pdf_generator.perform_gap_analysis(
             required_folders, required_files, actual_folders, actual_files
         )
@@ -75,7 +75,7 @@ class TestAuditCore(unittest.TestCase):
         # Extra FolderC and FolderC/File3.txt -> 2 OBS
         actual_folders = {"FolderA", "FolderC"}
         actual_files = {"FolderA/File1.txt", "FolderC/File3.txt"}
-        
+
         nc, obs, ofi, summary = pdf_generator.perform_gap_analysis(
             required_folders, required_files, actual_folders, actual_files
         )
@@ -100,7 +100,7 @@ class TestAuditCore(unittest.TestCase):
             os.makedirs(os.path.join(tmpdir, "FolderB"), exist_ok=True)
             with open(os.path.join(tmpdir, "FolderA", "File1.txt"), "w") as f:
                 f.write("hello")
-            
+
             nc, obs, ofi, summary = pdf_generator.perform_gap_analysis(
                 required_folders, required_files, actual_folders, actual_files, project_root=tmpdir
             )

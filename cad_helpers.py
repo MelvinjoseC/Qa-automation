@@ -17,6 +17,8 @@ from OCP.TDocStd import TDocStd_Document
 from OCP.XCAFApp import XCAFApp_Application
 from OCP.XCAFDoc import XCAFDoc_DocumentTool
 
+from exceptions import CADImportError
+
 try:
     import cadquery as cq
     CADQUERY_OK = True
@@ -24,6 +26,65 @@ try:
 except Exception as e:
     CADQUERY_OK = False
     CADQUERY_ERR = str(e)
+
+
+# Standard engineering material density presets (kg/m^3)
+MATERIAL_DENSITIES: Dict[str, float] = {
+    "Structural Steel (S235/S355)": 7850.0,
+    "Stainless Steel (304/316)": 8000.0,
+    "Aluminum Alloy (6061/7075)": 2700.0,
+    "Titanium (Grade 5)": 4430.0,
+    "Brass (CuZn39Pb3)": 8500.0,
+    "Bronze (CuSn8)": 8800.0,
+    "Copper": 8960.0,
+    "Cast Iron": 7200.0,
+    "Polyoxymethylene (POM/Delrin)": 1410.0,
+    "Polycarbonate (PC)": 1200.0,
+}
+
+
+def get_material_density(material_name: str, fallback: float = 7850.0) -> float:
+    """Retrieve material density in kg/m3 by name, with case-insensitive search."""
+    if not material_name:
+        return fallback
+    clean_name = material_name.strip().lower()
+    for name, density in MATERIAL_DENSITIES.items():
+        if clean_name in name.lower() or name.lower() in clean_name:
+            return density
+    return fallback
+
+
+def list_supported_materials() -> List[str]:
+    """Return a list of predefined material names."""
+    return list(MATERIAL_DENSITIES.keys())
+
+
+def convert_density(density: float, from_unit: str = "kg/m3", to_unit: str = "kg/m3") -> float:
+    """Convert material density between kg/m3, g/cm3, and lb/in3."""
+    from_u = from_unit.lower().replace(" ", "").replace("^", "")
+    to_u = to_unit.lower().replace(" ", "").replace("^", "")
+    if from_u == to_u:
+        return density
+
+    # Normalize to kg/m3 first
+    if from_u in ("kg/m3", "kg/m^3"):
+        val_kg_m3 = density
+    elif from_u in ("g/cm3", "g/cm^3"):
+        val_kg_m3 = density * 1000.0
+    elif from_u in ("lb/in3", "lb/in^3", "lbs/in3"):
+        val_kg_m3 = density * 27679.904
+    else:
+        val_kg_m3 = density
+
+    # Convert from kg/m3 to target
+    if to_u in ("kg/m3", "kg/m^3"):
+        return val_kg_m3
+    elif to_u in ("g/cm3", "g/cm^3"):
+        return val_kg_m3 / 1000.0
+    elif to_u in ("lb/in3", "lb/in^3", "lbs/in3"):
+        return val_kg_m3 / 27679.904
+    return val_kg_m3
+
 
 @dataclass
 class SolidRow:
@@ -228,7 +289,7 @@ def load_step_solids(step_path: str, density_kg_m3: float = 7850.0, tol_dim: flo
     Parse STEP and return per-solid rows with classification and signature.
     """
     if not CADQUERY_OK:
-        raise RuntimeError(f"CadQuery import failed: {CADQUERY_ERR}")
+        raise CADImportError(f"CadQuery import failed: {CADQUERY_ERR}")
 
     names_by_sig = {k: list(v) for k, v in extract_step_names(step_path, tol_dim=tol_dim).items()}
     wp = cq.importers.importStep(step_path)

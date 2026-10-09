@@ -32,7 +32,7 @@ def build_bom(solids: List[SolidRow]) -> List[BomRow]:
         avg_w = sum(x.Weight_kg for x in items) / qty
         tot_w = sum(x.Weight_kg for x in items)
         names = sorted({x.name for x in items if x.name})
-        
+
         # Choose length / thickness for display
         length = rep.L_mm
         thickness = rep.T_mm if rep.cls != "pin" else (rep.W_mm + rep.T_mm) / 2.0
