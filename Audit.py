@@ -2,6 +2,7 @@ from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import threading
 from tkinter import (
     BOTH,
     END,
@@ -16,10 +17,13 @@ from tkinter import (
     ttk,
 )
 
-
-from mdr_parser import parse_mdr_docx
+from mdr_parser import parse_mdr
+from pdf_generator import (
+    generate_json_audit_report,
+    generate_pdf_report,
+    perform_gap_analysis,
+)
 from project_scanner import scan_project_structure
-from pdf_generator import perform_gap_analysis, generate_pdf_report
 
 # =========================
 # CONFIG / BRANDING
@@ -182,8 +186,8 @@ class ISOAditorGUI:
 
     def select_mdr(self):
         path = filedialog.askopenfilename(
-            title="Select MDR (.docx)",
-            filetypes=[("Word Document", "*.docx")]
+            title="Select MDR (.docx, .csv)",
+            filetypes=[("MDR Files", "*.docx *.csv *.tsv"), ("Word Document", "*.docx"), ("CSV Document", "*.csv"), ("All files", "*.*")]
         )
         if path:
             self.mdr_path = path
@@ -201,53 +205,76 @@ class ISOAditorGUI:
 
     def run_audit(self):
         if not self.mdr_path:
-            self.log("ERROR: Please select a valid MDR Word document first.")
+            self.log("ERROR: Please select a valid MDR document first.")
             return
         if not self.project_path:
             self.log("ERROR: Please select a valid project directory to audit.")
             return
 
-        try:
-            self.log("Step 1: Parsing Master Document Register (MDR)...")
-            required_folders, required_files = parse_mdr_docx(self.mdr_path)
+        def worker():
+            try:
+                self.log("Step 1: Parsing Master Document Register (MDR)...")
+                required_folders, required_files = parse_mdr(self.mdr_path)
 
-            self.log("Step 2: Scanning actual project folder structure...")
-            actual_folders, actual_files = scan_project_structure(self.project_path)
+                self.log("Step 2: Scanning actual project folder structure...")
+                actual_folders, actual_files = scan_project_structure(self.project_path)
 
-            self.log("Step 3: Performing logical gap analysis...")
-            nc_list, obs_list, ofi_list, summary = perform_gap_analysis(
-                required_folders, required_files, actual_folders, actual_files, self.project_path
-            )
+                self.log("Step 3: Performing logical gap analysis...")
+                nc_list, obs_list, ofi_list, summary = perform_gap_analysis(
+                    required_folders, required_files, actual_folders, actual_files, self.project_path
+                )
 
-            # Output path
-            report_dir = os.path.join(self.project_path, "_audit_reports")
-            os.makedirs(report_dir, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            pdf_name = f"ISO_Audit_Report_{timestamp}.pdf"
-            pdf_path = os.path.join(report_dir, pdf_name)
+                # Output paths
+                report_dir = os.path.join(self.project_path, "_audit_reports")
+                os.makedirs(report_dir, exist_ok=True)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                pdf_name = f"ISO_Audit_Report_{timestamp}.pdf"
+                pdf_path = os.path.join(report_dir, pdf_name)
+                json_name = f"ISO_Audit_Report_{timestamp}.json"
+                json_path = os.path.join(report_dir, json_name)
 
-            self.log(f"Step 4: Compiling PDF report and styling tables: {pdf_path}")
-            generate_pdf_report(
-                pdf_path,
-                self.project_path,
-                self.mdr_path,
-                required_folders,
-                required_files,
-                actual_folders,
-                actual_files,
-                nc_list,
-                obs_list,
-                ofi_list,
-                summary,
-            )
+                self.log(f"Step 4: Compiling PDF report: {pdf_path}")
+                generate_pdf_report(
+                    pdf_path,
+                    self.project_path,
+                    self.mdr_path,
+                    required_folders,
+                    required_files,
+                    actual_folders,
+                    actual_files,
+                    nc_list,
+                    obs_list,
+                    ofi_list,
+                    summary,
+                )
 
-            self.log("SUCCESS: Audit run finished successfully.")
-            self.log(f"-> Report saved to: {pdf_path}")
-            self.log(f"-> Session logs appended to: {LOG_FILE}")
+                generate_json_audit_report(
+                    json_path,
+                    self.project_path,
+                    self.mdr_path,
+                    required_folders,
+                    required_files,
+                    actual_folders,
+                    actual_files,
+                    nc_list,
+                    obs_list,
+                    ofi_list,
+                    summary,
+                )
 
-        except Exception as e:
-            logging.exception("Exception occurred during audit execution.")
-            self.log(f"CRITICAL ERROR during audit run: {e}")
+                score = summary.get("compliance_score", 100.0)
+                status = summary.get("compliance_status", "COMPLIANT")
+                self.log(f"SUCCESS: Audit completed! Score: {score}% ({status})")
+                self.log(f"-> Non-Conformities: {summary['nc_count']} | Observations: {summary['obs_count']} | OFI: {summary['ofi_count']}")
+                self.log(f"-> PDF Report:  {pdf_path}")
+                self.log(f"-> JSON Report: {json_path}")
+                self.log(f"-> Session logs appended to: {LOG_FILE}")
+
+            except Exception as e:
+                logging.exception("Exception occurred during audit execution.")
+                self.log(f"CRITICAL ERROR during audit run: {e}")
+
+        threading.Thread(target=worker, daemon=True).start()
 
 
 def main():
