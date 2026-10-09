@@ -59,3 +59,50 @@ def build_bom(solids: List[SolidRow]) -> List[BomRow]:
     for i, r in enumerate(bom, start=1):
         r.pos = i
     return bom
+
+
+@dataclass
+class BomSummary:
+    total_parts: int
+    unique_items: int
+    total_weight_kg: float
+    heaviest_part: str
+    heaviest_weight_kg: float
+    class_distribution: Dict[str, Dict[str, float]]
+
+
+def summarize_bom(bom: List[BomRow]) -> BomSummary:
+    """Compute high-level aggregation statistics for a BOM table."""
+    total_parts = sum(r.qty for r in bom)
+    unique_items = len(bom)
+    total_weight = sum(r.total_weight_kg for r in bom)
+
+    heaviest_part = ""
+    heaviest_weight = 0.0
+
+    distribution: Dict[str, Dict[str, float]] = {}
+
+    for r in bom:
+        if r.avg_weight_kg > heaviest_weight:
+            heaviest_weight = r.avg_weight_kg
+            heaviest_part = r.names or r.key
+
+        if r.class_name not in distribution:
+            distribution[r.class_name] = {"count": 0, "total_weight_kg": 0.0, "percentage": 0.0}
+        distribution[r.class_name]["count"] += r.qty
+        distribution[r.class_name]["total_weight_kg"] += r.total_weight_kg
+
+    for data in distribution.values():
+        if total_weight > 0:
+            data["percentage"] = round((data["total_weight_kg"] / total_weight) * 100.0, 1)
+        data["total_weight_kg"] = round(data["total_weight_kg"], 3)
+
+    return BomSummary(
+        total_parts=total_parts,
+        unique_items=unique_items,
+        total_weight_kg=round(total_weight, 3),
+        heaviest_part=heaviest_part,
+        heaviest_weight_kg=round(heaviest_weight, 3),
+        class_distribution=distribution,
+    )
+
