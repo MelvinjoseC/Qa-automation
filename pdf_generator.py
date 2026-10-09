@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import logging
 import os
 from pathlib import Path
@@ -355,3 +356,56 @@ def generate_pdf_report(
     except Exception as e:
         raise PDFGenerationError(f"Failed to compile PDF report: {e}") from e
     logging.info("PDF report generated successfully.")
+
+
+def generate_json_audit_report(
+    output_path: str,
+    project_root: str,
+    mdr_path: str,
+    required_folders,
+    required_files,
+    actual_folders,
+    actual_files,
+    nc_list,
+    obs_list,
+    ofi_list,
+    summary,
+) -> str:
+    """Generate a machine-readable JSON audit report."""
+    report_data = {
+        "metadata": {
+            "company_name": COMPANY_NAME,
+            "company_tagline": COMPANY_TAGLINE,
+            "audit_timestamp": datetime.now().isoformat(),
+            "project_root": str(project_root),
+            "mdr_path": str(mdr_path),
+        },
+        "summary": summary,
+        "requirements": {
+            "required_folders_count": len(required_folders),
+            "required_files_count": len(required_files),
+            "required_folders": sorted(list(required_folders)),
+            "required_files": sorted(list(required_files)),
+        },
+        "actual": {
+            "actual_folders_count": len(actual_folders),
+            "actual_files_count": len(actual_files),
+            "actual_folders": sorted(list(actual_folders)),
+            "actual_files": sorted(list(actual_files)),
+        },
+        "findings": {
+            "non_conformities": nc_list,
+            "observations": obs_list,
+            "opportunities_for_improvement": ofi_list,
+        },
+    }
+
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, indent=2)
+    except Exception as e:
+        raise PDFGenerationError(f"Failed to generate JSON audit report: {e}") from e
+
+    logging.info(f"JSON audit report saved to: {output_path}")
+    return output_path
+
