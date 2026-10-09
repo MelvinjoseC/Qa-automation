@@ -1,17 +1,53 @@
-import os
-import logging
 from datetime import datetime
+import logging
+import os
 from pathlib import Path
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.lib import colors
+from typing import Any, Dict
+
 from exceptions import PDFGenerationError
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 # Configuration / Branding Defaults (Can be customized)
 COMPANY_NAME = "FUSIE Engineers"
 COMPANY_TAGLINE = "Precision. Safety. Compliance."
 COMPANY_LOGO_PATH = "branding/fusie_logo.png"
+
+
+def calculate_compliance_score(
+    required_count: int,
+    nc_count: int,
+    ofi_count: int = 0,
+    obs_count: int = 0,
+) -> Dict[str, Any]:
+    """Calculate an ISO compliance score percentage and health rating."""
+    if required_count <= 0:
+        score = 100.0
+    else:
+        conforming = max(0, required_count - nc_count)
+        score = round((conforming / required_count) * 100.0, 1)
+
+    if score >= 95.0 and nc_count == 0:
+        status = "COMPLIANT"
+        status_color = "#38A169"
+    elif score >= 80.0:
+        status = "MINOR DEFICIENCIES"
+        status_color = "#D69E2E"
+    else:
+        status = "NON-COMPLIANT"
+        status_color = "#E53E3E"
+
+    severity_index = (nc_count * 10) + (ofi_count * 3) + (obs_count * 1)
+    return {
+        "compliance_score": score,
+        "compliance_status": status,
+        "status_color": status_color,
+        "severity_index": severity_index,
+        "total_required": required_count,
+    }
+
 
 def perform_gap_analysis(required_folders, required_files, actual_folders, actual_files, project_root=None):
     """
@@ -92,6 +128,14 @@ def perform_gap_analysis(required_folders, required_files, actual_folders, actua
                 except Exception as e:
                     logging.warning(f"Failed to check if folder {folder_path} is empty: {e}")
 
+    total_required = len(required_folders) + len(required_files)
+    metrics = calculate_compliance_score(
+        required_count=total_required,
+        nc_count=len(nc_list),
+        ofi_count=len(ofi_list),
+        obs_count=len(obs_list),
+    )
+
     summary = {
         "missing_folders": len(missing_folders),
         "missing_files": len(missing_files),
@@ -100,6 +144,11 @@ def perform_gap_analysis(required_folders, required_files, actual_folders, actua
         "nc_count": len(nc_list),
         "obs_count": len(obs_list),
         "ofi_count": len(ofi_list),
+        "compliance_score": metrics["compliance_score"],
+        "compliance_status": metrics["compliance_status"],
+        "status_color": metrics["status_color"],
+        "severity_index": metrics["severity_index"],
+        "total_required": total_required,
     }
 
     logging.info(f"Gap analysis done: {summary}")
@@ -171,7 +220,13 @@ def generate_pdf_report(
 
     # Summary section
     flow.append(Paragraph("A. Summary", styles['SectionHeader']))
+    score = summary.get("compliance_score", 100.0)
+    status = summary.get("compliance_status", "COMPLIANT")
+    severity = summary.get("severity_index", 0)
+
     summary_lines = [
+        f"• ISO Compliance Score: <b>{score}%</b> ({status})",
+        f"• Risk Severity Penalty Index: <b>{severity}</b>",
         f"• Missing Folders: {summary['missing_folders']}",
         f"• Missing Files: {summary['missing_files']}",
         f"• Extra Folders: {summary['extra_folders']}",
