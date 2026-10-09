@@ -2,14 +2,16 @@ import csv
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from typing import Dict, List, Tuple
 
-from bom_builder import BomRow, build_bom
+from bom_builder import BomRow, build_bom, export_bom_to_json
 from cad_helpers import (
     CADQUERY_ERR,
     CADQUERY_OK,
+    MATERIAL_DENSITIES,
     SolidRow,
     load_step_solids,
 )
@@ -92,17 +94,26 @@ class StepBOMApp(tk.Tk):
         row2 = ttk.Frame(settings_frame)
         row2.pack(fill=tk.X)
 
+        ttk.Label(row2, text="Material:").pack(side=tk.LEFT, padx=(0, 4))
+        self.material_var = tk.StringVar(value="Structural Steel (S235/S355)")
+        self.combo_material = ttk.Combobox(
+            row2, textvariable=self.material_var, values=list(MATERIAL_DENSITIES.keys()), width=24, state="readonly"
+        )
+        self.combo_material.pack(side=tk.LEFT, padx=(0, 10))
+        self.combo_material.bind("<<ComboboxSelected>>", self._on_material_selected)
+
         ttk.Label(row2, text="Density (kg/m³):").pack(side=tk.LEFT, padx=(0, 4))
         self.density_var = tk.StringVar(value="7850")
-        ttk.Entry(row2, textvariable=self.density_var, width=8).pack(side=tk.LEFT, padx=(0, 15))
+        ttk.Entry(row2, textvariable=self.density_var, width=6).pack(side=tk.LEFT, padx=(0, 10))
 
-        ttk.Label(row2, text="Dim Tolerance (mm):").pack(side=tk.LEFT, padx=(0, 4))
+        ttk.Label(row2, text="Tolerance (mm):").pack(side=tk.LEFT, padx=(0, 4))
         self.tol_var = tk.StringVar(value="0.25")
-        ttk.Entry(row2, textvariable=self.tol_var, width=6).pack(side=tk.LEFT, padx=(0, 20))
+        ttk.Entry(row2, textvariable=self.tol_var, width=5).pack(side=tk.LEFT, padx=(0, 12))
 
-        ttk.Button(row2, text="Load & Build BOM", command=self.on_load, style="Action.TButton").pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(row2, text="Export Solids CSV", command=self.export_solids).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(row2, text="Export BOM CSV", command=self.export_bom).pack(side=tk.LEFT)
+        ttk.Button(row2, text="Load & Build BOM", command=self.on_load, style="Action.TButton").pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(row2, text="Solids CSV", command=self.export_solids).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(row2, text="BOM CSV", command=self.export_bom).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(row2, text="BOM JSON", command=self.export_bom_json).pack(side=tk.LEFT)
 
         self.status = tk.StringVar(value="Ready. Please select a .stp or .step file to start analysis.")
         self.status_label = ttk.Label(self, textvariable=self.status, padding=(12, 4))
@@ -190,20 +201,24 @@ class StepBOMApp(tk.Tk):
         if path:
             self.path_var.set(path)
 
+    def _on_material_selected(self, event=None):
+        mat = self.material_var.get()
+        if mat in MATERIAL_DENSITIES:
+            self.density_var.set(str(int(MATERIAL_DENSITIES[mat])))
+
     def on_load(self):
-        path = self.path_var.get().strip()
+        path = (self.path_var.get() or "").strip()
         if not path:
-            messagebox.showwarning("No file", "Pick a STEP file.")
+            messagebox.showinfo("Missing file", "Please select a STEP file first.")
             return
         if not os.path.isfile(path):
-            messagebox.showerror("Not found", path)
+            messagebox.showerror("File error", "Selected file does not exist.")
             return
-        if not path.lower().endswith((".stp",".step")):
+        if not path.lower().endswith((".stp", ".step")):
             messagebox.showerror("Wrong type", "Select .stp or .step")
             return
         if not CADQUERY_OK:
-            messagebox.showerror("CadQuery not available",
-                                 f"{CADQUERY_ERR}\n\nInstall with: pip install cadquery")
+            messagebox.showerror("CadQuery not available", f"{CADQUERY_ERR}\n\nInstall with: pip install cadquery")
             return
 
         try:
@@ -217,34 +232,37 @@ class StepBOMApp(tk.Tk):
             tol = 0.25
             self.tol_var.set("0.25")
 
-        self.status.set("Parsing STEP & building BOM…")
+        self.status.set("Parsing STEP & building BOM… (running in background)")
         self.progress.pack(side=tk.TOP, fill=tk.X, padx=12, pady=(0, 6))
         self.progress.start(10)
-        self.update_idletasks()
 
-        try:
-            solids = load_step_solids(path, density_kg_m3=density, tol_dim=tol)
-        except Exception as e:
-            self.progress.stop()
-            self.progress.pack_forget()
-            messagebox.showerror("STEP error", str(e))
-            self.status.set("Failed.")
-            return
+        def worker():
+            try:
+                solids = load_step_solids(path, density_kg_m3=density, tol_dim=tol)
+                bom = build_bom(solids)
+                self.after(0, lambda: self._on_load_success(path, solids, bom))
+            except Exception as e:
+                self.after(0, lambda err=str(e): self._on_load_error(err))
 
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_load_success(self, path: str, solids: List[SolidRow], bom: List[BomRow]):
         self.progress.stop()
         self.progress.pack_forget()
-
         self._step_path = path
         self._solids = solids
         self.populate_solids(solids)
-
-        bom = build_bom(solids)
         self._bom = bom
         self.populate_bom(bom)
         self.populate_bom_by_class(bom)
-
         total_w = sum(b.total_weight_kg for b in bom)
         self.status.set(f"Loaded {len(solids)} solids → {len(bom)} BOM lines | Total weight ≈ {total_w:.3f} kg")
+
+    def _on_load_error(self, err_msg: str):
+        self.progress.stop()
+        self.progress.pack_forget()
+        messagebox.showerror("STEP error", err_msg)
+        self.status.set("Failed.")
 
 
     def populate_solids(self, rows: List[SolidRow]):
@@ -363,6 +381,20 @@ class StepBOMApp(tk.Tk):
                             f"{r.length_mm:.0f}", f"{r.thickness_mm:.3f}",
                             r.qty, f"{r.avg_weight_kg:.6f}", f"{r.total_weight_kg:.0f}"])
         messagebox.showinfo("Export", f"Saved: {path}")
+
+    def export_bom_json(self):
+        if not self._bom:
+            messagebox.showinfo("Export", "Build the BOM first.")
+            return
+        path = filedialog.asksaveasfilename(
+            title="Export BOM JSON", defaultextension=".json",
+            filetypes=[("JSON", "*.json")]
+        )
+        if not path:
+            return
+        export_bom_to_json(self._bom, path, include_summary=True)
+        messagebox.showinfo("Export", f"Saved: {path}")
+
 
 def main():
     import sys
