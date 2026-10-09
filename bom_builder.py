@@ -1,5 +1,6 @@
-from dataclasses import dataclass
-from typing import List, Dict
+from dataclasses import asdict, dataclass
+import json
+from typing import Any, Dict, List
 from cad_helpers import SolidRow, make_size_key
 
 @dataclass
@@ -147,5 +148,36 @@ def filter_bom(
             total_weight_kg=r.total_weight_kg,
         ))
     return result
+
+
+def bom_to_dicts(bom: List[BomRow]) -> List[Dict[str, Any]]:
+    """Convert BOM rows to a list of standard dictionaries."""
+    return [asdict(r) for r in bom]
+
+
+def solids_to_dicts(solids: List[SolidRow]) -> List[Dict[str, Any]]:
+    """Convert SolidRow entries to standard dictionaries."""
+    return [asdict(s) for s in solids]
+
+
+def export_bom_to_json(bom: List[BomRow], output_path: str, include_summary: bool = True) -> str:
+    """Export BOM dataset and summary statistics to a formatted JSON file."""
+    payload: Dict[str, Any] = {
+        "bom": bom_to_dicts(bom),
+    }
+    if include_summary:
+        payload["summary"] = asdict(summarize_bom(bom))
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    return output_path
+
+
+def export_solids_to_json(solids: List[SolidRow], output_path: str) -> str:
+    """Export raw measured solid geometry rows to a formatted JSON file."""
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump({"solids": solids_to_dicts(solids)}, f, indent=2)
+    return output_path
+
 
 
