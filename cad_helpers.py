@@ -146,6 +146,34 @@ def classify(L: float, W: float, T: float) -> str:
     return "profile"
 
 
+def aspect_ratios(L: float, W: float, T: float) -> Tuple[float, float]:
+    """Calculate (L/W, W/T) aspect ratios safely."""
+    w_safe = max(W, 1e-6)
+    t_safe = max(T, 1e-6)
+    return round(L / w_safe, 2), round(W / t_safe, 2)
+
+
+def slenderness_ratio(L: float, W: float, T: float) -> float:
+    """Calculate structural slenderness ratio L / min(W, T)."""
+    min_cross = max(min(W, T), 1e-6)
+    return round(L / min_cross, 2)
+
+
+def estimate_raw_stock_weight(L: float, W: float, T: float, density_kg_m3: float = 7850.0) -> float:
+    """Estimate raw rectangular billet/stock weight in kg based on bounding box."""
+    vol_mm3 = max(L, 0.0) * max(W, 0.0) * max(T, 0.0)
+    vol_m3 = vol_mm3 / 1e9
+    return vol_m3 * density_kg_m3
+
+
+def compute_scrap_percentage(net_weight: float, raw_stock_weight: float) -> float:
+    """Calculate scrap material loss percentage from raw stock to finished part."""
+    if raw_stock_weight <= 1e-9 or net_weight >= raw_stock_weight:
+        return 0.0
+    return round(((raw_stock_weight - net_weight) / raw_stock_weight) * 100.0, 2)
+
+
+
 def round_sig(value: float, tol: float) -> float:
     """Round a float to a grid defined by tolerance, e.g., tol=0.25 mm."""
     if tol <= 0:
